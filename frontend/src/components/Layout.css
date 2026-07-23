@@ -1,0 +1,406 @@
+/* Layout.css — Estilos unificados para Navbar + Sidebar */
+
+/* ══════════════════════════════════
+   ESTRUCTURA RAÍZ
+══════════════════════════════════ */
+.layout-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Área de contenido: posición relative para alojar el fondo desenfocado */
+.layout-main {
+  flex: 1;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  /* Fondo sólido de respaldo si el pseudo-elemento no carga */
+  background-color: var(--color-bg-secondary);
+}
+
+/* Fondo degradado desenfocado (mismo que el Login, pero difuminado) */
+.layout-main::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  filter: blur(12px);
+  z-index: 0;
+}
+
+/* El contenido siempre queda encima del fondo */
+.layout-main>* {
+  position: relative;
+  z-index: 1;
+}
+
+
+
+/* ══════════════════════════════════
+   NAVBAR
+══════════════════════════════════ */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 70px;
+  background-color: var(--color-surface);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.hamburger-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-main);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.hamburger-btn:hover {
+  background-color: var(--color-input-bg);
+  color: var(--color-primary);
+}
+
+.sidebar-menu-logo {
+  display: block;
+  max-width: 150px;
+  height: auto;
+  margin: 10px auto 25px auto;
+  object-fit: contain;
+}
+
+.navbar-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.navbar-fecha {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  text-transform: capitalize;
+}
+
+.navbar-hora {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+/* ── Información de área, turno y fecha ── */
+.assignment-info {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-right: 20px;
+  border-right: 1.5px solid var(--color-border);
+}
+
+.assignment-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.info-item.muted {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.fecha-texto {
+  text-transform: capitalize;
+}
+
+.info-icon {
+  opacity: 0.9;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  margin-right: 20px;
+  gap: 2px;
+  justify-content: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  height: 12%;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.user-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.user-role {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Botón de cerrar sesión pequeño ── */
+.logout-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background-color: transparent;
+  color: #e74c3c;
+  border: 1.2px solid #e74c3c;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: auto;
+  width: 100%;
+}
+
+.logout-btn:hover {
+  background-color: #e74c3c;
+  color: white;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.15);
+}
+
+.logout-text {
+  display: inline-block;
+}
+
+/* ══════════════════════════════════
+   SIDEBAR + OVERLAY
+══════════════════════════════════ */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 149;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 375px;
+  background-color: var(--color-surface);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08);
+  z-index: 150;
+  padding: 20px 12px;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-open {
+  transform: translateX(0);
+}
+
+.sidebar-section-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 1.5px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+  margin-top: 50px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text-main);
+  font-size: 18px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.sidebar-item:hover {
+  background-color: var(--color-input-bg);
+  color: var(--color-primary);
+}
+
+.sidebar-item-activo {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.sidebar-icono {
+  font-size: 27px;
+  min-width: 35px;
+  text-align: center;
+}
+
+/* ══════════════════════════════════
+   MEDIA QUERIES PARA RESPONSIVIDAD
+   ══════════════════════════════════ */
+@media (max-width: 1200px) {
+  .assignment-info {
+    gap: 12px;
+    padding-right: 15px;
+  }
+
+  .info-item.muted {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 992px) {
+  .assignment-info {
+    gap: 10px;
+    padding-right: 10px;
+  }
+
+  .info-item.muted {
+    display: none;
+    /* Ocultar fecha en el navbar en resoluciones intermedias */
+  }
+
+  .layout-main {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .navbar-logo span {
+    font-size: 18px;
+  }
+
+  .navbar-logo img {
+    height: 24px;
+  }
+
+  .assignment-info {
+    display: none;
+    /* Ocultar asignación de supervisor en barra superior en móviles */
+  }
+
+  .user-info {
+    display: none;
+    /* Ocultar información de rol y nombre del usuario en móviles */
+  }
+
+  .layout-main {
+    padding: 20px 16px;
+  }
+
+  .sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logout-text {
+    display: none;
+    /* Ocultar la etiqueta "Salir" en pantallas muy angostas */
+  }
+
+  .logout-btn {
+    padding: 8px;
+  }
+}
+
+/* --- LAYOUT SIN NAVBAR --- */
+.layout-main {
+  margin-left: 0;
+  padding: 80px 15px 15px 15px;
+  /* Espacio para el botón de menú flotante y máximo ancho de pantalla */
+}
+
+/* Estilo del botón de menú hamburguesa flotante en todas las pantallas */
+.hamburger-btn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-main);
+  cursor: pointer;
+  z-index: 210;
+  /* Queda sobre el sidebar (150) para poder cerrarlo haciendo clic en el mismo botón */
+  transition: all 0.2s ease;
+}
+
+.hamburger-btn:hover {
+  background-color: var(--color-input-bg);
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 280px;
+  }
+}

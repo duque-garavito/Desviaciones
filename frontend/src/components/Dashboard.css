@@ -1,0 +1,114 @@
+/* Dashboard.css — Estilos del panel principal de inspección */
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.welcome-section h2 {
+  font-size: 30px;
+  color: var(--color-text-main);
+  margin-bottom: 4px;
+}
+
+.content-section {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-bg-secondary);
+}
+
+.section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  color: var(--color-text-main);
+}
+
+.section-desc {
+  font-size: 16px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+/* Tablas */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.dashboard-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dashboard-container th {
+  text-align: left;
+  padding: 16px 20px;
+  font-size: 15px;
+  text-transform: uppercase;
+  color: var(--color-surface);
+  background: var(--color-complemento);
+  border-bottom: 1px solid var(--color-complemento);
+}
+
+.dashboard-container td {
+  padding: 18px 20px;
+  font-size: 17px;
+  color: var(--color-text-main);
+  border-bottom: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.dashboard-container tr.clickable td:first-child {
+  border-left: 4px solid transparent;
+}
+
+.dashboard-container tr.clickable:hover td {
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.dashboard-container tr.clickable:hover td:first-child {
+  border-left-color: var(--color-primary);
+  padding-left: 24px;
+}
+
+.badge-turno {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.badge-turno.día {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.badge-turno.noche {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+  .content-section {
+    padding: 18px;
+  }
+}
