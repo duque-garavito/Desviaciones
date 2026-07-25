@@ -41,9 +41,9 @@ const update = async (req, res) => {
 };
 
 const buscarArticulos = async (req, res) => {
-  const { buscar, sub_cat } = req.query;
+  const { buscar, sub_cat, cod_as } = req.query;
   try {
-    const articulos = await InspectionModel.buscarArticulos(buscar || '', sub_cat || '');
+    const articulos = await InspectionModel.buscarArticulos(buscar || '', sub_cat || '', cod_as || '');
     res.json({ success: true, articulos });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -60,10 +60,21 @@ const getDeviationCauses = async (req, res) => {
   }
 };
 
+const getDeviationsByArticle = async (req, res) => {
+  const { cod_as, cod_art } = req.query;
+  try {
+    const desviaciones = await InspectionModel.getDeviationsByArticle(cod_as, cod_art);
+    res.json({ success: true, desviaciones });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getMyForm,
   save,
   update,
   buscarArticulos,
-  getDeviationCauses
+  getDeviationCauses,
+  getDeviationsByArticle
 };

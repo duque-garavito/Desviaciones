@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host --port 5007",
     "build": "vite build",
+    "deploy:tablet": "vite build && npx cap sync android && adb reverse tcp:3002 tcp:3002 && cd android && gradlew.bat installDebug && adb shell am start -n com.fisholg.desviaciones/com.fisholg.desviaciones.MainActivity",
     "lint": "eslint .",
     "preview": "vite preview"
   },

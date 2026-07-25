@@ -1,9 +1,12 @@
-// Configuración dinámica de la API
-// Detecta si estamos en localhost en la PC o en la Tablet (APK/Red local)
-const hostname = window.location.hostname;
+import { Capacitor } from '@capacitor/core';
 
-const isLocalBrowser = (hostname === 'localhost' || hostname === '127.0.0.1') && window.location.port;
+// Configuración de la API
+// En APK nativo (Tablet conectada por USB), se usa http://localhost:3002 con 'adb reverse'
+// En navegador Web PC, se usa http://localhost:3002 o IP local
+const isNative = Capacitor.isNativePlatform();
 
-export const API_BASE_URL = isLocalBrowser
+export const API_BASE_URL = isNative
   ? 'http://localhost:3002'
-  : 'http://192.168.10.93:3002'; // IP de tu PC servidor en la red local
+  : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3002'
+    : 'http://192.168.10.93:3002';

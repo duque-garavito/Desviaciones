@@ -50,6 +50,7 @@ class RecordModel {
         rc.COD_REP_C as id,
         rc.COD_RV,
         rc.NRO_REF as lote,
+        art.NOM_ARTICULO as nom_articulo,
         rc.TIPO_REF as tipo_ref,
         rc.FEC_REGISTRO as fecha_raw,
         u.NOMBRE as inspector,
@@ -66,6 +67,7 @@ class RecordModel {
       ) pcd ON mr.COD_REPORTE = pcd.COD_REPORTE
       LEFT JOIN AREAS_SUPERVISION a ON pcd.COD_AS = a.COD_AS
       LEFT JOIN USUARIO u ON rc.COD_USR = u.COD_USR
+      LEFT JOIN ARTICULO art ON TRIM(rc.NRO_REF) = TRIM(art.COD_ART)
       ${whereClause}
       ORDER BY rc.FEC_REGISTRO DESC
     `, replacements);

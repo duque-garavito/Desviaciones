@@ -58,21 +58,53 @@
   gap: 15px;
 }
 
+/* ══════════════════════════════════
+   BOTÓN MENÚ FLOTANTE PREMIUM
+══════════════════════════════════ */
 .hamburger-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  display: flex;
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 1100;
+  display: inline-flex;
   align-items: center;
-  color: var(--color-text-main);
-  transition: background 0.2s ease, color 0.2s ease;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--color-primary), #0d2c54);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(23, 86, 166, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
 }
 
 .hamburger-btn:hover {
-  background-color: var(--color-input-bg);
-  color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary-hover), #0f172a);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(23, 86, 166, 0.45);
+}
+
+.hamburger-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.hamburger-btn.abierto {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.hamburger-btn.abierto:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.hamburger-label {
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .sidebar-menu-logo {

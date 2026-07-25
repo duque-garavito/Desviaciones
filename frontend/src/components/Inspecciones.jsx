@@ -1,43 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
 import { Search, Loader2, CheckCircle2, AlertCircle, Package, ChevronRight, Check, Save } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import './Inspecciones.css';
 
-/* ════════════════════════════════════════════════
-   PANTALLA 0 – Inicio (solo botón Iniciar Reporte)
-════════════════════════════════════════════════ */
-function PantallaInicio({ onIniciar }) {
-  return (
-    <div className="ins-inicio-container">
-      <button className="ins-btn-iniciar-reporte" onClick={onIniciar}>
-        Iniciar Reporte
-      </button>
-    </div>
-  );
-}
 
 /* ════════════════════════════════════════════════
    PANTALLA 1 – Selección de Artículo
 ════════════════════════════════════════════════ */
-function PantallaSeleccionArticulo({ onSeleccionar, conteoMuestra, onConteoChange }) {
+function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
   const [busqueda, setBusqueda] = useState('');
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const recognitionRef = useRef(null);
-  const [escuchando, setEscuchando] = useState(false);
 
   useEffect(() => {
     buscarArticulos('');
-  }, []);
+  }, [codArea]);
 
   const buscarArticulos = async (termino) => {
     setCargando(true);
     try {
       const params = new URLSearchParams();
       if (termino && termino.trim().length >= 1) params.set('buscar', termino.trim());
-      const res = await fetch(`${API_BASE_URL}/api/inspecciones/articulos?${params}`);
+      if (codArea) params.set('cod_as', String(codArea).trim());
+      const res = await fetch(`${API_BASE_URL}/api/inspecciones/articulos?${params.toString()}`);
       const data = await res.json();
       setLista(data.success ? (data.articulos || []) : []);
     } catch {
@@ -52,18 +39,6 @@ function PantallaSeleccionArticulo({ onSeleccionar, conteoMuestra, onConteoChang
     buscarArticulos(valor);
   };
 
-  const iniciarVoz = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    const rec = new SpeechRecognition();
-    rec.lang = 'es-ES';
-    rec.onstart = () => setEscuchando(true);
-    rec.onend = () => setEscuchando(false);
-    rec.onresult = (e) => handleBusquedaChange(e.results[0][0].transcript);
-    recognitionRef.current = rec;
-    rec.start();
-  };
-
   return (
     <div className="ins-pantalla-articulo">
       {/* Encabezado elegante */}
@@ -74,7 +49,6 @@ function PantallaSeleccionArticulo({ onSeleccionar, conteoMuestra, onConteoChang
           </div>
           <div>
             <h2 className="ins-header-title">Selección de Artículo</h2>
-            <p className="ins-header-subtitle">Elija el producto para iniciar la inspección de calidad</p>
           </div>
         </div>
       </div>
@@ -99,7 +73,7 @@ function PantallaSeleccionArticulo({ onSeleccionar, conteoMuestra, onConteoChang
             &times;
           </button>
         )}
-        
+
       </div>
 
       {/* Contador de resultados */}
@@ -161,28 +135,47 @@ function PantallaFormulario({
   onFinalizar,
   onCambiarArticulo
 }) {
-  // Estado de la muestra actual
-  const [muestraActual, setMuestraActual] = useState(1);          // auto-incremental
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
+  const [muestraActual, setMuestraActual] = useState(1);
+  const [desviacionSeleccionada, setDesviacionSeleccionada] = useState(null);
   const [causaSeleccionada, setCausaSeleccionada] = useState(null);
 
-  // Lista de muestras ya registradas
   const [muestrasGuardadas, setMuestrasGuardadas] = useState([]);
 
-  // Causas disponibles cargadas de la BD
+  const [desviacionesDisponibles, setDesviacionesDisponibles] = useState([]);
+  const [cargandoDesviaciones, setCargandoDesviaciones] = useState(false);
+
   const [causasDisponibles, setCausasDisponibles] = useState([]);
   const [cargandoCausas, setCargandoCausas] = useState(false);
+  const [categoriaCausaActiva, setCategoriaCausaActiva] = useState('TODAS');
 
-  // Modal de confirmación
   const [mostrarConfirm, setMostrarConfirm] = useState(false);
   const [confirmarFinalizar, setConfirmarFinalizar] = useState(false);
   const [confirmarCambiarArticulo, setConfirmarCambiarArticulo] = useState(false);
 
-  // Enviando al backend
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
-  // Cargar causas al montar o cambiar de artículo
+  useEffect(() => {
+    const cargarDesviaciones = async () => {
+      if (!articulo) return;
+      setCargandoDesviaciones(true);
+      try {
+        const params = new URLSearchParams();
+        if (formularioInfo?.cod_area) params.set('cod_as', formularioInfo.cod_area);
+        if (articulo?.COD_ART) params.set('cod_art', String(articulo.COD_ART).trim());
+
+        const res = await fetch(`${API_BASE_URL}/api/inspecciones/desviaciones-articulo?${params.toString()}`);
+        const data = await res.json();
+        if (data.success) setDesviacionesDisponibles(data.desviaciones || []);
+      } catch {
+        setDesviacionesDisponibles([]);
+      } finally {
+        setCargandoDesviaciones(false);
+      }
+    };
+    cargarDesviaciones();
+  }, [articulo, formularioInfo]);
+
   useEffect(() => {
     const cargarCausas = async () => {
       if (!articulo) return;
@@ -196,7 +189,15 @@ function PantallaFormulario({
 
         const res = await fetch(`${API_BASE_URL}/api/inspecciones/causas-desviacion?${params.toString()}`);
         const data = await res.json();
-        if (data.success) setCausasDisponibles(data.causas || []);
+        if (data.success) {
+          const causas = data.causas || [];
+          setCausasDisponibles(causas);
+          if (causas.length > 0 && causas[0].categoria) {
+            setCategoriaCausaActiva(causas[0].categoria.trim());
+          } else {
+            setCategoriaCausaActiva('TODAS');
+          }
+        }
       } catch {
         setCausasDisponibles([]);
       } finally {
@@ -206,36 +207,24 @@ function PantallaFormulario({
     cargarCausas();
   }, [articulo, formularioInfo]);
 
-  // Categorías únicas
-  const categorias = [...new Set(causasDisponibles.map(c => c.categoria))].filter(Boolean);
+  const fase = !desviacionSeleccionada ? 'desviaciones' : 'causas';
 
-  // Causas filtradas por categoría seleccionada
-  const causasFiltradas = causasDisponibles.filter(c => c.categoria === categoriaSeleccionada);
-
-  // Fase actual dentro de la pantalla 2:
-  //   'categorias'  → mostrar grid de categorías + Sin Defecto
-  //   'causas'      → mostrar grid de causas (ya hay categoría seleccionada)
-  const fase = !categoriaSeleccionada ? 'categorias' : 'causas';
-
-  /* ── Selección de categoría ── */
-  const handleSeleccionarCategoria = (cat) => {
-    setCategoriaSeleccionada(cat);
+  const handleSeleccionarDesviacion = (desv) => {
+    setDesviacionSeleccionada(desv);
     setCausaSeleccionada(null);
   };
 
-  /* ── Selección de causa → dispara modal automáticamente ── */
   const handleSeleccionarCausa = (causa) => {
     setCausaSeleccionada(causa);
-    setMostrarConfirm(true);   // modal inmediato
+    setMostrarConfirm(true);
   };
 
-  /* ── Confirmar guardado de muestra ── */
   const confirmarGuardar = () => {
     if (causaSeleccionada) {
-      // Muestra con desviación
       const muestra = {
         nro: muestraActual,
-        categoriaLabel: categoriaSeleccionada,
+        desviacionLabel: desviacionSeleccionada?.motivo_desviacion || '',
+        desviacionCod: desviacionSeleccionada?.cod_pregunta || '',
         causaLabel: causaSeleccionada?.descr || '',
         causaCod: causaSeleccionada?.cod_mcd || '',
         causaSubCat: causaSeleccionada?.cod_sub_cat || '',
@@ -244,10 +233,10 @@ function PantallaFormulario({
       };
       setMuestrasGuardadas(prev => [...prev, muestra]);
     } else {
-      // Muestra sin defecto
       const muestra = {
         nro: muestraActual,
-        categoriaLabel: null,
+        desviacionLabel: null,
+        desviacionCod: null,
         causaLabel: null,
         causaCod: null,
         causaSubCat: null,
@@ -260,20 +249,18 @@ function PantallaFormulario({
     resetMuestra();
   };
 
-  /* ── Sin Defecto: abre modal de confirmación ── */
   const handleSinDefecto = () => {
+    setDesviacionSeleccionada(null);
     setCausaSeleccionada(null);
     setMostrarConfirm(true);
   };
 
-  /* ── Reset para la siguiente muestra ── */
   const resetMuestra = () => {
     setMuestraActual(prev => prev + 1);
-    setCategoriaSeleccionada(null);
+    setDesviacionSeleccionada(null);
     setCausaSeleccionada(null);
   };
 
-  /* ── Finalizar: solicita confirmación ── */
   const handleFinalizarReporte = () => {
     if (muestrasGuardadas.length === 0) {
       setMensaje({ tipo: 'error', texto: 'Registre al menos una muestra antes de finalizar.' });
@@ -283,39 +270,40 @@ function PantallaFormulario({
     setConfirmarFinalizar(true);
   };
   const handleCambiarArticulo = () => {
-    if (muestrasGuardadas.length > 0 || categoriaSeleccionada || causaSeleccionada) {
+    if (muestrasGuardadas.length > 0 || desviacionSeleccionada || causaSeleccionada) {
       setConfirmarCambiarArticulo(true);
     } else {
       onCambiarArticulo();
     }
   };
-  /* ── Guardado real en BD al confirmar ── */
+
   const ejecutarFinalizarReporte = async (afterAction = 'finalizar') => {
     setConfirmarFinalizar(false);
     setEnviando(true);
     try {
       const horaFin = new Date().toISOString();
-
-      // Construir respuestas agrupadas por pregunta
       const muestrasConDesvio = muestrasGuardadas.filter(m => !m.sinDefecto);
       const totalDesvios = muestrasConDesvio.length;
       const totalSinDefecto = muestrasGuardadas.filter(m => m.sinDefecto).length;
 
       const respuestasArray = preguntas.map(p => {
-        if (p.tipo_campo === 'N') {
+        const desviosDeEstaPregunta = muestrasConDesvio.filter(m => m.desviacionCod === p.id || m.desviacionLabel === p.texto);
+        const countDesvios = desviosDeEstaPregunta.length;
+
+        if (p.tipo_campo === 'N' || countDesvios > 0) {
           let respVarchar = null;
-          if (totalDesvios > 0) {
-            const serialized = muestrasConDesvio.map(m =>
-              `Muestra ${m.nro}: ${m.categoriaLabel} - ${m.causaLabel} (Cant: 1)`
+          if (countDesvios > 0) {
+            const serialized = desviosDeEstaPregunta.map(m =>
+              `Muestra ${m.nro}: ${m.desviacionLabel} - ${m.causaLabel} (Cant: 1)`
             ).join(' | ');
             respVarchar = `Causas: ${serialized}`;
           }
           return {
             cod_pregunta: p.id,
             resp_char: null,
-            resp_number: totalDesvios,
+            resp_number: countDesvios,
             resp_varchar: respVarchar,
-            causas: muestrasConDesvio.map(m => ({
+            causas: desviosDeEstaPregunta.map(m => ({
               cod_mcd: m.causaCod,
               cod_sub_cat: m.causaSubCat,
               cod_especi: m.causaEspeci
@@ -371,8 +359,6 @@ function PantallaFormulario({
 
   return (
     <div className="ins-formulario-container">
-
-      {/* ══ HEADER FIJO ══ */}
       <div className="ins-form-header">
         <button className="ins-btn-finalizar" onClick={handleFinalizarReporte} disabled={enviando}>
           {enviando ? <Loader2 size={14} className="spinner" /> : null}
@@ -387,7 +373,6 @@ function PantallaFormulario({
         </button>
       </div>
 
-      {/* Toast */}
       {mensaje && (
         <div className={`ins-toast ${mensaje.tipo}`}>
           {mensaje.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -395,53 +380,49 @@ function PantallaFormulario({
         </div>
       )}
 
-      {/* ══ CUERPO ══ */}
       <div className="ins-form-body">
-
-        {/* Fila: Muestra N° + tags de selección actual */}
         <div className="ins-muestra-row">
           <label className="ins-muestra-label">Muestra N°</label>
           <span className="ins-muestra-numero">{muestraActual}</span>
-          {categoriaSeleccionada && (
+          {desviacionSeleccionada && (
             <span
               className="ins-sel-tag categoria"
-              onClick={() => { setCategoriaSeleccionada(null); setCausaSeleccionada(null); }}
-              title="Cambiar categoría"
+              onClick={() => { setDesviacionSeleccionada(null); setCausaSeleccionada(null); }}
+              title="Cambiar motivo desviación"
             >
-              {categoriaSeleccionada}
+              {desviacionSeleccionada.motivo_desviacion}
             </span>
           )}
           {causaSeleccionada && (
             <span
               className="ins-sel-tag causa"
               onClick={() => setCausaSeleccionada(null)}
-              title="Cambiar causa"
+              title="Cambiar motivo causa"
             >
               {causaSeleccionada.descr}
             </span>
           )}
         </div>
 
-        {/* ── Grid de CATEGORÍAS o CAUSAS ── */}
         <div className="ins-categorias-area">
-          {fase === 'categorias' && (
+          {fase === 'desviaciones' && (
             <>
-              <p className="ins-seleccione-label">Seleccione una categoria causa</p>
-              {cargandoCausas ? (
+              <p className="ins-seleccione-label">Seleccione un motivo desviación</p>
+              {cargandoDesviaciones ? (
                 <div className="ins-lista-loading">
-                  <Loader2 size={20} className="spinner" /> Cargando categorías...
+                  <Loader2 size={20} className="spinner" /> Cargando desviaciones...
                 </div>
-              ) : categorias.length === 0 ? (
-                <p className="ins-lista-vacia">No hay categorías disponibles para este artículo</p>
+              ) : desviacionesDisponibles.length === 0 ? (
+                <p className="ins-lista-vacia">No hay desviaciones asociadas a este artículo</p>
               ) : (
                 <div className="ins-grid">
-                  {categorias.map(cat => (
+                  {desviacionesDisponibles.map(desv => (
                     <button
-                      key={cat}
+                      key={desv.cod_pregunta || desv.motivo_desviacion}
                       className="ins-grid-btn"
-                      onClick={() => handleSeleccionarCategoria(cat)}
+                      onClick={() => handleSeleccionarDesviacion(desv)}
                     >
-                      {cat}
+                      {desv.motivo_desviacion}
                     </button>
                   ))}
                 </div>
@@ -449,31 +430,71 @@ function PantallaFormulario({
             </>
           )}
 
-          {fase === 'causas' && (
-            <>
-              <p className="ins-seleccione-label">Seleccione un motivo causa</p>
-              <div className="ins-grid">
-                {causasFiltradas.map(causa => (
-                  <button
-                    key={causa.cod_mcd}
-                    className={`ins-grid-btn ${causaSeleccionada?.cod_mcd === causa.cod_mcd ? 'seleccionada' : ''}`}
-                    onClick={() => handleSeleccionarCausa(causa)}
-                  >
-                    {causa.descr}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          {fase === 'causas' && (() => {
+            const categoriasUnicas = Array.from(
+              new Set(causasDisponibles.map(c => c.categoria ? c.categoria.trim() : 'General'))
+            );
+            const causasFiltradas = categoriaCausaActiva && categoriaCausaActiva !== 'TODAS'
+              ? causasDisponibles.filter(c => (c.categoria ? c.categoria.trim() : 'General') === categoriaCausaActiva)
+              : causasDisponibles;
+
+            return (
+              <>
+                <p className="ins-seleccione-label">Seleccione una categoría y motivo causa</p>
+                
+                {categoriasUnicas.length > 0 && (
+                  <div className="ins-tabs-categorias">
+                    <button
+                      className={`ins-tab-btn ${categoriaCausaActiva === 'TODAS' ? 'activa' : ''}`}
+                      onClick={() => setCategoriaCausaActiva('TODAS')}
+                    >
+                      Todas
+                    </button>
+                    {categoriasUnicas.map(cat => (
+                      <button
+                        key={cat}
+                        className={`ins-tab-btn ${categoriaCausaActiva === cat ? 'activa' : ''}`}
+                        onClick={() => setCategoriaCausaActiva(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {cargandoCausas ? (
+                  <div className="ins-lista-loading">
+                    <Loader2 size={20} className="spinner" /> Cargando causas...
+                  </div>
+                ) : causasFiltradas.length === 0 ? (
+                  <p className="ins-lista-vacia">No hay causas disponibles en esta categoría</p>
+                ) : (
+                  <div className="ins-grid">
+                    {causasFiltradas.map(causa => (
+                      <button
+                        key={causa.cod_mcd || causa.descr}
+                        className={`ins-grid-btn ${causaSeleccionada?.cod_mcd === causa.cod_mcd ? 'seleccionada' : ''}`}
+                        onClick={() => handleSeleccionarCausa(causa)}
+                      >
+                        {causa.descr}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
-        {/* ── Botón Sin Defecto (siempre visible al fondo) ── */}
-        <button
-          className="ins-btn-sin-defecto"
-          onClick={handleSinDefecto}
-        >
-          <Check size={24} strokeWidth={3} /> Sin Defecto
-        </button>
+        {/* ── Botón Sin Defecto (solo visible en la fase de desviaciones) ── */}
+        {fase === 'desviaciones' && (
+          <button
+            className="ins-btn-sin-defecto"
+            onClick={handleSinDefecto}
+          >
+            <Check size={24} strokeWidth={3} /> Sin Defecto
+          </button>
+        )}
       </div>
 
       {/* ══ MODAL DE CONFIRMACIÓN ══ */}
@@ -484,7 +505,7 @@ function PantallaFormulario({
             <p>
               ¿Desea registrar la <strong>Muestra N° {muestraActual}</strong>{' '}
               {causaSeleccionada ? (
-                <>con la desviación: <strong>{causaSeleccionada.descr}</strong>?</>
+                <>con la desviación: <strong>{desviacionSeleccionada?.motivo_desviacion}</strong> - <strong>{causaSeleccionada.descr}</strong>?</>
               ) : (
                 <><strong>Sin Defecto</strong>?</>
               )}
@@ -638,6 +659,14 @@ function Inspecciones({ usuario }) {
         }
       } catch (err) {
         console.error('Error cargando formulario:', err);
+        const urlDestino = `${API_BASE_URL}/api/inspecciones/formulario-hoy/${usuario?.id}`;
+        const redStatus = navigator.onLine ? "Red activa" : "Sin conexión Wi-Fi";
+        const detalleError = [
+          `URL: ${urlDestino}`,
+          `Error: ${err?.name || 'Error'} - ${err?.message || String(err)}`,
+          `Estado Red: ${redStatus}`
+        ].join('\n\n');
+        alert(`⚠️ Error en Inspecciones:\n\n${detalleError}`);
         setError('No se pudo conectar con el servidor.');
       } finally {
         setCargando(false);
@@ -717,6 +746,7 @@ function Inspecciones({ usuario }) {
           <>
             <PantallaSeleccionArticulo
               onSeleccionar={handleSeleccionarArticulo}
+              codArea={formularioInfo?.cod_area}
             />
             {confirmarArticulo && (
               <div className="ins-modal-overlay">

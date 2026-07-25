@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Inspecciones from './components/Inspecciones';
@@ -35,7 +35,7 @@ function App() {
   };
 
   return (
-    <BrowserRouter basename="/desviaciones">
+    <Router>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -60,7 +60,7 @@ function App() {
         } />
 
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 

@@ -17,8 +17,7 @@ function Login({ onLoginExitoso }) {
       const response = await fetch(`${API_BASE_URL}/api/usuarios/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, password }),
       });
@@ -38,7 +37,14 @@ function Login({ onLoginExitoso }) {
       }
     } catch (error) {
       console.error("Error al conectar con el servidor:", error);
-      alert("No se pudo conectar con el servidor" + API_BASE_URL + ". Verifica que esté encendido." + error.message.toString());
+      const urlDestino = `${API_BASE_URL}/api/usuarios/login`;
+      const redStatus = navigator.onLine ? "Red activa" : "Sin conexión Wi-Fi";
+      const detalleError = [
+        `URL: ${urlDestino}`,
+        `Error: ${error?.name || 'Error'} - ${error?.message || String(error)}`,
+        `Estado Red: ${redStatus}`
+      ].join('\n\n');
+      alert(`⚠️ No se pudo conectar con el servidor:\n\n${detalleError}`);
     }
   };
 
@@ -61,6 +67,8 @@ function Login({ onLoginExitoso }) {
               placeholder="Ingrese su Usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
               required
             />
           </div>

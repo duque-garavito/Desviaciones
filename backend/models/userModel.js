@@ -29,15 +29,15 @@ function decryptPassword(encrypted) {
 }
 
 class UserModel {
-  // Buscar usuario por código de usuario (COD_USR) y contraseña desencriptada
+  // Buscar usuario por código de usuario (COD_USR) y contraseña desencriptada (insensible a mayúsculas/minúsculas)
   static async findByCredentials(codUsr, password) {
     const query = `
       SELECT COD_USR, NOMBRE, EMAIL as CORREO, EMAIL as USUARIO, PERFIL, CLAVE
       FROM USUARIO
-      WHERE COD_USR = :codUsr
+      WHERE LOWER(TRIM(COD_USR)) = LOWER(:codUsr)
     `;
 
-    const results = await db.execute(query, { codUsr });
+    const results = await db.execute(query, { codUsr: String(codUsr || '').trim() });
     if (results.length === 0) return null;
     
     const user = results[0];
@@ -64,8 +64,8 @@ class UserModel {
       SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE
       FROM PROGRAMACION_CALIDAD_DET pd
       LEFT JOIN AREAS_SUPERVISION a ON pd.COD_AS = a.COD_AS
-      WHERE pd.COD_USR = :userId AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
-    `, { userId, todayStr });
+      WHERE LOWER(TRIM(pd.COD_USR)) = LOWER(:userId) AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
+    `, { userId: String(userId || '').trim(), todayStr });
     
     return results[0];
   }

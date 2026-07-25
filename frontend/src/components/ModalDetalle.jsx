@@ -93,7 +93,6 @@ function ModalDetalle({ id, isOpen, onClose }) {
                       <label>Fecha</label>
                       <span>{baseReg.fecha}</span>
                     </div>
-                    <p></p>
                     <div className="detalle-info-item">
                       <label>Hora Inicio</label>
                       <span>{baseReg.hora_inicio || '—'}</span>

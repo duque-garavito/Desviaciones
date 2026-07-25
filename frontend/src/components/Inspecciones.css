@@ -51,12 +51,12 @@
 .ins-header-info {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 20px;
 }
 
 .ins-header-icon-badge {
-  width: 48px;
-  height: 48px;
+  width: 45px;
+  height: 45px;
   border-radius: 12px;
   background: linear-gradient(135deg, #eff6ff, #dbeafe);
   color: var(--color-primary, #2563eb);
@@ -477,7 +477,7 @@
 .ins-muestra-tag {
   padding: 6px 14px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -516,7 +516,7 @@
 }
 
 .ins-muestra-label {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #475569;
   white-space: nowrap;
@@ -526,11 +526,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--color-primary);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: white;
   text-align: center;
@@ -543,7 +543,7 @@
   gap: 8px;
   padding: 8px 18px;
   border-radius: 20px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -586,22 +586,77 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
-  min-height: 240px;
+  min-height: 380px;
+  max-height: calc(100vh - 270px);
+  overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
 }
 
+.ins-categorias-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ins-categorias-area::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.ins-categorias-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.ins-categorias-area::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 .ins-seleccione-label {
-  font-size: 16px;
+  font-size: 18px;
   color: #64748b;
   margin-bottom: 16px;
   font-style: italic;
   font-weight: 500;
 }
 
-/* Grid unificado (categorías y causas) */
+/* Pestañas (Tabs) de Categorías de Causas */
+.ins-tabs-categorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ins-tab-btn {
+  padding: 8px 16px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ins-tab-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+.ins-tab-btn.activa {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(23, 86, 166, 0.25);
+}
+
+/* Grid dinámico adaptable (categorías y causas) */
 .ins-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
 }
 
@@ -610,7 +665,7 @@
   border: 1px solid var(--color-primary-hover);
   border-radius: 12px;
   background: var(--color-primary);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -803,7 +858,24 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Responsive tablet ── */
+/* ── Responsive tablet & mobile (optimización fluida para tablets) ── */
+@media (max-width: 1024px) {
+  .ins-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .ins-grid-btn {
+    padding: 24px 14px;
+    font-size: 16px;
+  }
+
+  .ins-categorias-area {
+    padding: 16px;
+    max-height: calc(100vh - 240px);
+  }
+}
+
 @media (max-width: 768px) {
   .ins-form-header {
     flex-wrap: wrap;
@@ -817,7 +889,18 @@
   }
 
   .ins-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+
+  .ins-grid-btn {
+    padding: 20px 10px;
+    font-size: 14px;
+  }
+
+  .ins-tab-btn {
+    padding: 6px 12px;
+    font-size: 13px;
   }
 }
 

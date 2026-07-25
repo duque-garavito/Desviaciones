@@ -43,7 +43,7 @@ class InspectionModel {
     const replacements = { COD_AS: cod_as };
 
     if (especie) {
-      formQuery += ` AND TRIM(pcd.COD_ESPECI) = TRIM(:ESPECIE) `;
+      formQuery += ` AND (pcd.COD_ESPECI IS NULL OR TRIM(pcd.COD_ESPECI) = TRIM(:ESPECIE)) `;
       replacements.ESPECIE = especie;
     }
 
@@ -147,17 +147,15 @@ class InspectionModel {
           for (const c of r.causas) {
             const codMcd = typeof c === 'object' ? c.cod_mcd : c;
             const codSubCat = typeof c === 'object' ? c.cod_sub_cat : null;
-            const codEspeci = typeof c === 'object' ? c.cod_especi : null;
 
             await conn.execute(`
-              INSERT INTO REPORTE_RESPUESTAS_DET_CAUSAS (COD_REP_C, ITEM, COD_MCD, COD_SUB_CAT, COD_ESPECI)
-              VALUES (:cod_rep_c, :item, :codMcd, :codSubCat, :codEspeci)
+              INSERT INTO REPORTE_RESPUESTAS_DET_CAUSAS (COD_REP_C, ITEM, COD_MCD, COD_SUB_CAT)
+              VALUES (:cod_rep_c, :item, :codMcd, :codSubCat)
             `, {
               cod_rep_c,
               item: i + 1,
               codMcd,
-              codSubCat: codSubCat || null,
-              codEspeci: codEspeci || null
+              codSubCat: codSubCat || null
             });
           }
         }
@@ -212,17 +210,15 @@ class InspectionModel {
           for (const c of r.causas) {
             const codMcd = typeof c === 'object' ? c.cod_mcd : c;
             const codSubCat = typeof c === 'object' ? c.cod_sub_cat : null;
-            const codEspeci = typeof c === 'object' ? c.cod_especi : null;
 
             await conn.execute(`
-              INSERT INTO REPORTE_RESPUESTAS_DET_CAUSAS (COD_REP_C, ITEM, COD_MCD, COD_SUB_CAT, COD_ESPECI)
-              VALUES (:cod_rep_c, :item, :codMcd, :codSubCat, :codEspeci)
+              INSERT INTO REPORTE_RESPUESTAS_DET_CAUSAS (COD_REP_C, ITEM, COD_MCD, COD_SUB_CAT)
+              VALUES (:cod_rep_c, :item, :codMcd, :codSubCat)
             `, {
               cod_rep_c,
               item: r.item || (i + 1),
               codMcd,
-              codSubCat: codSubCat || null,
-              codEspeci: codEspeci || null
+              codSubCat: codSubCat || null
             });
           }
         }
@@ -238,10 +234,23 @@ class InspectionModel {
     }
   }
 
-  // Buscar artículos por código, nombre, etiqueta o subcategoría
-  static async buscarArticulos(busqueda, subCat) {
+  // Buscar artículos por código, nombre, etiqueta o subcategoría (filtrados por el área del inspector)
+  static async buscarArticulos(busqueda, subCat, codAs) {
     let subCatWhere = '';
-    const replacements = { busqueda: `%${busqueda}%` };
+    let areaWhere = '';
+    let busquedaWhere = '';
+    let areaJoin = '';
+    const replacements = {};
+
+    if (codAs && codAs.trim() !== '') {
+      areaJoin = `
+        JOIN PLANTILLA_CAUSA_DESVIACION pcd ON t.SUB_CAT_ART = pcd.COD_SUB_CAT
+        JOIN REPORTES_VERSIONADO rv ON pcd.COD_REPORTE = rv.COD_REPORTE
+        JOIN PREGUNTAS_VERSIONADO pv ON rv.COD_RV = pv.COD_RV
+      `;
+      areaWhere = ` AND pcd.COD_AS = :codAs AND rv.FLAG_ESTADO IN ('1', 'A') `;
+      replacements.codAs = codAs.trim();
+    }
 
     if (subCat && subCat.trim() !== '') {
       subCatWhere = ` AND (
@@ -252,8 +261,18 @@ class InspectionModel {
       replacements.subCat = `%${subCat.trim()}%`;
     }
 
+    if (busqueda && busqueda.trim() !== '') {
+      busquedaWhere = ` AND (
+        UPPER(t.COD_ART)       LIKE UPPER(:busqueda)
+        OR UPPER(t.NOM_ARTICULO)  LIKE UPPER(:busqueda)
+        OR UPPER(t.DESC_ETIQUETA) LIKE UPPER(:busqueda)
+      ) `;
+      replacements.busqueda = `%${busqueda.trim()}%`;
+    }
+
     const query = `
-      SELECT t.COD_ART,
+      SELECT DISTINCT
+             t.COD_ART,
              t.NOM_ARTICULO,
              t.DESC_ETIQUETA,
              t2.DESC_SUB_CAT,
@@ -267,75 +286,98 @@ class InspectionModel {
              ) as ESPECIE
         FROM ARTICULO t
         JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
+        ${areaJoin}
        WHERE t.COD_CLASE   = '01'
          AND t.FLAG_ESTADO IN ('1', 'A')
+         ${areaWhere}
          ${subCatWhere}
-          AND (
-               UPPER(t.COD_ART)       LIKE UPPER(:busqueda)
-            OR UPPER(t.NOM_ARTICULO)  LIKE UPPER(:busqueda)
-            OR UPPER(t.DESC_ETIQUETA) LIKE UPPER(:busqueda)
-         )
+         ${busquedaWhere}
        ORDER BY t.NOM_ARTICULO
        FETCH FIRST 30 ROWS ONLY
     `;
     return await db.execute(query, replacements);
   }
 
-  // Obtener causas de desviación para un reporte, área de supervisión, subcategoría o artículo
+  // Obtener causas de desviación filtradas por área y artículo
   static async getDeviationCauses(codReporte, codAs, codSubCat, codArt) {
-    let subCatToUse = codSubCat ? String(codSubCat).trim() : null;
-    if (!subCatToUse && codArt) {
-      try {
-        const artRes = await db.execute(
-          `SELECT SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :codArt FETCH FIRST 1 ROWS ONLY`,
-          { codArt: String(codArt).trim() }
-        );
-        if (artRes.length > 0 && artRes[0].SUB_CAT_ART) {
-          subCatToUse = String(artRes[0].SUB_CAT_ART).trim();
-        }
-      } catch (err) {
-        console.error('Error buscando subcategoría de artículo:', err.message);
-      }
-    }
+    // 1. Consulta filtrada por artículo + área
+    if (codArt && codArt.trim() !== '') {
+      let areaWhere = '';
+      const replacements = { codArt: String(codArt).trim() };
 
-    // 1. Intentar buscar causas filtradas por subcategoría si la tabla filtro tiene registros para esa subcategoría
-    if (subCatToUse) {
-      const querySubCat = `
-        SELECT DISTINCT
-               mcd.COD_MCD,
+      if (codAs && codAs.trim() !== '') {
+        areaWhere = ' AND pcd.COD_AS = :codAs ';
+        replacements.codAs = String(codAs).trim();
+      }
+
+      const queryArticle = `
+        SELECT MIN(mcd.COD_MCD) as COD_MCD,
                mcd.DESCR,
-               cc.DESCR as CATEGORIA,
-               mcdf.COD_SUB_CAT,
-               mcdf.COD_ESPECI
+               MIN(cc.DESCR) as CATEGORIA,
+               MIN(mcdf.COD_SUB_CAT) as COD_SUB_CAT
           FROM MAESTRO_CAUSAS_DESVIACION mcd
           JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
           JOIN MAESTRO_CAUSAS_DESVIACION_FILTRO mcdf ON mcd.COD_MCD = mcdf.COD_MCD
-         WHERE TRIM(mcdf.COD_SUB_CAT) = :subCatToUse
-         ORDER BY cc.DESCR, mcd.DESCR
+          JOIN PLANTILLA_CAUSA_DESVIACION pcd ON TRIM(mcdf.COD_SUB_CAT) = TRIM(pcd.COD_SUB_CAT)
+          JOIN ARTICULO a ON TRIM(mcdf.COD_SUB_CAT) = TRIM(a.SUB_CAT_ART)
+         WHERE TRIM(a.COD_ART) = :codArt
+           ${areaWhere}
+         GROUP BY mcd.DESCR
+         ORDER BY mcd.DESCR
       `;
-      const causasSubCat = await db.execute(querySubCat, { subCatToUse });
-      if (causasSubCat.length > 0) {
-        return causasSubCat.map(r => this.toLowercaseKeys(r));
+      const causasArt = await db.execute(queryArticle, replacements);
+      if (causasArt.length > 0) {
+        return causasArt.map(r => this.toLowercaseKeys(r));
       }
     }
 
-    // 2. Consulta Maestra Directa (Fallback): Si la tabla filtro o plantilla están vacías,
-    //    retornar todas las causas del catálogo (MAESTRO_CAUSAS_DESVIACION + CATEGORIA_CAUSA)
+    // 2. Fallback: catálogo maestro completo de causas
     const queryDirect = `
-      SELECT DISTINCT
-             mcd.COD_MCD,
+      SELECT MIN(mcd.COD_MCD) as COD_MCD,
              mcd.DESCR,
-             cc.DESCR as CATEGORIA,
-             mcdf.COD_SUB_CAT,
-             mcdf.COD_ESPECI
+             MIN(cc.DESCR) as CATEGORIA
         FROM MAESTRO_CAUSAS_DESVIACION mcd
         JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
-        LEFT JOIN MAESTRO_CAUSAS_DESVIACION_FILTRO mcdf ON mcd.COD_MCD = mcdf.COD_MCD
-       ORDER BY cc.DESCR, mcd.DESCR
+       GROUP BY mcd.DESCR
+       ORDER BY mcd.DESCR
     `;
 
     const causas = await db.execute(queryDirect);
     return causas.map(r => this.toLowercaseKeys(r));
+  }
+
+  // Obtener motivos de desviación asociados a un artículo y área
+  static async getDeviationsByArticle(codAs, codArt) {
+    if (!codAs && !codArt) return [];
+
+    let whereClause = " WHERE rv.FLAG_ESTADO IN ('1', 'A') ";
+    const replacements = {};
+
+    if (codAs && codAs.trim() !== '') {
+      whereClause += " AND pcd.COD_AS = :codAs ";
+      replacements.codAs = String(codAs).trim();
+    }
+
+    if (codArt && codArt.trim() !== '') {
+      whereClause += " AND TRIM(a.COD_ART) = :codArt ";
+      replacements.codArt = String(codArt).trim();
+    }
+
+    const query = `
+      SELECT DISTINCT 
+             mp.COD_PREGUNTA, 
+             mp.DESCR as MOTIVO_DESVIACION
+        FROM MAESTRO_PREGUNTAS mp
+        JOIN PREGUNTAS_VERSIONADO pv ON mp.COD_PREGUNTA = pv.COD_PREGUNTA
+        JOIN REPORTES_VERSIONADO rv ON pv.COD_RV = rv.COD_RV
+        JOIN PLANTILLA_CAUSA_DESVIACION pcd ON rv.COD_REPORTE = pcd.COD_REPORTE
+        JOIN ARTICULO a ON pcd.COD_SUB_CAT = a.SUB_CAT_ART
+       ${whereClause}
+       ORDER BY mp.DESCR
+    `;
+
+    const rows = await db.execute(query, replacements);
+    return rows.map(r => this.toLowercaseKeys(r));
   }
 }
 

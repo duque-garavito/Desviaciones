@@ -5,7 +5,8 @@ import {
   Search,
   BarChart3,
   LogOut,
-  Menu
+  Menu,
+  X
 } from 'lucide-react';
 import logo from '../assets/images/fishlogo.png';
 import { API_BASE_URL } from '../config';
@@ -14,7 +15,7 @@ import './Layout.css';
 // ── Lista del menú lateral (solo opciones de inspector) ──
 const menuItems = [
   { id: 'dashboard', label: 'Programación Semanal', icono: <Calendar size={20} />, ruta: '/dashboard' },
-  { id: 'inspecciones', label: 'Muestreo ', icono: <Search size={20} />, ruta: '/inspecciones' },
+  { id: 'inspecciones', label: 'Muestreo de Desviaciones ', icono: <Search size={20} />, ruta: '/inspecciones' },
   { id: 'registros', label: 'Visualización de Registros', icono: <BarChart3 size={20} />, ruta: '/registros' },
 ];
 
@@ -67,13 +68,15 @@ function Layout({ usuario, children }) {
   return (
     <div className="layout-root">
 
-      {/* Botón de menú hamburguesa activo y visible para alternar el menú lateral */}
+      {/* Botón de menú hamburguesa flotante premium */}
       <button
-        className="hamburger-btn"
+        className={`hamburger-btn ${sidebarOpen ? 'abierto' : ''}`}
         onClick={() => setSidebarOpen(prev => !prev)}
         aria-label="Menú"
+        title="Alternar Menú Principal"
       >
-        <Menu size={24} />
+        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        <span className="hamburger-label">{sidebarOpen ? 'Cerrar' : 'Menú'}</span>
       </button>
 
 

@@ -8,5 +8,6 @@ router.post('/guardar', inspectionController.save);
 router.put('/editar/:id', inspectionController.update);
 router.get('/articulos', inspectionController.buscarArticulos);
 router.get('/causas-desviacion', inspectionController.getDeviationCauses);
+router.get('/desviaciones-articulo', inspectionController.getDeviationsByArticle);
 
 module.exports = router;

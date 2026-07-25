@@ -195,7 +195,6 @@ function Registros({ usuario }) {
         <div className="registros-header">
           <div>
             <h2><FileText size={22} /> Visualización de Registros</h2>
-            <p>Historial completo de inspecciones realizadas en planta.</p>
           </div>
         </div>
 
@@ -472,46 +471,37 @@ function Registros({ usuario }) {
                 <table className="registros-table">
                   <thead>
                     <tr>
-                      {/*<th>Código</th>*/}
+                      <th>Fecha</th>
+                      <th>Área</th>
                       <th>Inspector</th>
                       <th>Formulario</th>
-                      <th>Área</th>
-                      {/*<th>Artículo</th>*/}
-                      <th>Versión</th>
-                      <th>Fecha</th>
-                      <th>Items</th>
-                      <th></th>
+                      <th>Artículo / Ref.</th>
+                      <th>Respuestas</th>
+                      {/*<th>Acciones</th>*/}
                     </tr>
                   </thead>
                   <tbody>
                     {agruparRegistros(registros).map(reg => (
                       <tr key={reg.id} onClick={() => verDetalle(reg.id)}>
-                        {/*<td style={{ fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'normal', maxWidth: '150px' }}>{reg.id}</td>*/}
-                        <td>{reg.inspector}</td>
-                        <td>{reg.formulario}</td>
+                        <td style={{ fontSize: '13px', fontWeight: '500', color: '#475569' }}>{reg.fecha}</td>
                         <td><span className="badge-area">{reg.area}</span></td>
-                        {/*<td style={{ fontWeight: '500' }}>{reg.lote || '—'}</td>*/}
-                        <td><span className="badge-version">v{reg.version}</span></td>
-                        <td>{reg.fecha}</td>
-                        <td>{reg.total_respuestas}</td>
-                        <td style={{ display: 'flex', gap: '8px' }}>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{reg.inspector}</td>
+                        <td style={{ fontSize: '13px' }}>{reg.formulario} <span className="badge-version">v{reg.version}</span></td>
+                        <td style={{ fontWeight: '600', color: '#1e293b' }}>
+                          <div>{reg.lote || '—'}</div>
+                          {reg.nom_articulo && reg.nom_articulo !== '—' && (
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal' }}>{reg.nom_articulo}</div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: '700', color: '#1756a6' }}>{reg.total_respuestas}</td>
+                        {/*<td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button
                             className="btn-ver-detalle"
                             onClick={(e) => { e.stopPropagation(); verDetalle(reg.id); }}
                           >
-                            <Eye size={12} /> Ver
+                            <Eye size={14} /> Ver Detalle
                           </button>
-                          {/*<button
-                            className="btn-ver-detalle"
-                            style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              navigate(`/inspecciones?editId=${reg.id}`);
-                            }}
-                          >
-                            <Edit3 size={12} /> Editar
-                          </button>*/}
-                        </td>
+                        </td>*/}
                       </tr>
                     ))}
                   </tbody>
