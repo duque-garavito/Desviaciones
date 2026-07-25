@@ -14,6 +14,7 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
 
+  // Cargar catálogo inicial solo al montar o cambiar de área
   useEffect(() => {
     buscarArticulos('');
   }, [codArea]);
@@ -22,7 +23,7 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
     setCargando(true);
     try {
       const params = new URLSearchParams();
-      if (termino && termino.trim().length >= 1) params.set('buscar', termino.trim());
+      if (termino && termino.trim().length >= 2) params.set('buscar', termino.trim());
       if (codArea) params.set('cod_as', String(codArea).trim());
       const res = await fetch(`${API_BASE_URL}/api/inspecciones/articulos?${params.toString()}`);
       const data = await res.json();
@@ -34,9 +35,20 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
     }
   };
 
+  // Debounce solo cuando hay 2 o más caracteres. Al borrar todo (< 2), NO busca nada.
+  useEffect(() => {
+    const txt = busqueda.trim();
+    if (txt.length < 2) return;
+
+    const timer = setTimeout(() => {
+      buscarArticulos(txt);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [busqueda]);
+
   const handleBusquedaChange = (valor) => {
     setBusqueda(valor);
-    buscarArticulos(valor);
   };
 
   return (
@@ -96,27 +108,33 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
             <p>{busqueda ? 'No se encontraron artículos con ese término' : 'No hay artículos registrados'}</p>
           </div>
         ) : (
-          lista.map((art, idx) => (
-            <div
-              key={art.COD_ART || idx}
-              className="ins-articulo-item"
-              onClick={() => onSeleccionar(art)}
-            >
-              <div className="ins-art-content">
-                <div className="ins-art-row-top">
-                  <span className="ins-art-cod">{art.COD_ART}</span>
-                  {art.DESC_SUB_CAT && (
-                    <span className="ins-art-subcat">{art.DESC_SUB_CAT}</span>
+          lista.map((art, idx) => {
+            const codArt = art.cod_art || art.COD_ART || '';
+            const nomArt = art.nom_articulo || art.NOM_ARTICULO || art.desc_art || art.DESC_ART || '';
+            const descSubCat = art.desc_sub_cat || art.DESC_SUB_CAT || '';
+            const descEtiqueta = art.desc_etiqueta || art.DESC_ETIQUETA || '';
+            return (
+              <div
+                key={codArt || idx}
+                className="ins-articulo-item"
+                onClick={() => onSeleccionar(art)}
+              >
+                <div className="ins-art-content">
+                  <div className="ins-art-row-top">
+                    <span className="ins-art-cod">{codArt}</span>
+                    {descSubCat && (
+                      <span className="ins-art-subcat">{descSubCat}</span>
+                    )}
+                  </div>
+                  <div className="ins-art-nom">{nomArt}</div>
+                  {descEtiqueta && (
+                    <div className="ins-art-desc">{descEtiqueta}</div>
                   )}
                 </div>
-                <div className="ins-art-nom">{art.NOM_ARTICULO}</div>
-                {art.DESC_ETIQUETA && (
-                  <div className="ins-art-desc">{art.DESC_ETIQUETA}</div>
-                )}
+                <ChevronRight size={18} className="ins-art-arrow" />
               </div>
-              <ChevronRight size={18} className="ins-art-arrow" />
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
@@ -668,7 +686,7 @@ function Inspecciones({ usuario }) {
         ].join('\n\n');
         alert(`⚠️ Error en Inspecciones:\n\n${detalleError}`);
         setError('No se pudo conectar con el servidor.');
-      } finally {
+          } finally {
         setCargando(false);
       }
     };

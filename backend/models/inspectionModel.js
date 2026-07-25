@@ -235,67 +235,121 @@ class InspectionModel {
   }
 
   // Buscar artículos por código, nombre, etiqueta o subcategoría (filtrados por el área del inspector)
+  // Buscar artículos por código, nombre o etiqueta utilizando las consultas exactas del archivo garavito.sql:
+  // - MP (Materia Prima, cod_clase='21') para Recepción (RECE)
+  // - PPTT (Producto Terminado, cod_clase='01') para Empaque (EMPA)
+  // - ARTICULO CONGELADO (ARTICULO_CONGE) para todas las demás áreas de proceso
+  // Buscar artículos utilizando exactamente las consultas literales del archivo garavito.sql:
+  // 1. MP (Materia Prima): Solo para Recepción (RECE)
+  // 2. PPTT (Producto Terminado): Para Empaque (EMPA)
+  // 3. ARTICULO CONGELADO | PROCESO: Para todas las demás áreas de proceso
   static async buscarArticulos(busqueda, subCat, codAs) {
-    let subCatWhere = '';
-    let areaWhere = '';
-    let busquedaWhere = '';
-    let areaJoin = '';
-    const replacements = {};
+    const areaNorm = (codAs || '').trim().toUpperCase();
+    const txtBusqueda = (busqueda || '').trim();
+    const replacements = {
+      busqueda: txtBusqueda,
+      codAs: (codAs || '').trim()
+    };
 
-    if (codAs && codAs.trim() !== '') {
-      areaJoin = `
-        JOIN PLANTILLA_CAUSA_DESVIACION pcd ON t.SUB_CAT_ART = pcd.COD_SUB_CAT
-        JOIN REPORTES_VERSIONADO rv ON pcd.COD_REPORTE = rv.COD_REPORTE
-        JOIN PREGUNTAS_VERSIONADO pv ON rv.COD_RV = pv.COD_RV
+    let query = '';
+
+    if (areaNorm === 'RECE' || areaNorm === 'RECEPCION') {
+      // --MP (Materia Prima, literal garavito.sql)
+      query = `
+        SELECT t.COD_ART,
+               t.Desc_Art,
+               t.DESC_ETIQUETA,
+               t2.DESC_SUB_CAT,
+               t.SUB_CAT_ART,
+               es.especie
+          FROM ARTICULO t
+          JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
+          inner join tg_especies es on t2.cat_art=es.cat_art
+          inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+         WHERE
+           t.FLAG_ESTADO IN ('1', 'A')
+           AND (
+                 UPPER(t.COD_ART)       LIKE '%'|| UPPER(trim(:busqueda)) ||'%'
+              OR UPPER(t.Desc_Art)  LIKE  '%'||UPPER(:busqueda) ||'%'
+              OR UPPER(t.DESC_ETIQUETA) LIKE '%'||UPPER(:busqueda)||'%'
+           )
+           and pc.cod_as = :codAs
+           and t.cod_clase='21'
+         ORDER BY t.Desc_Art
+         FETCH FIRST 20 ROWS ONLY
       `;
-      areaWhere = ` AND pcd.COD_AS = :codAs AND rv.FLAG_ESTADO IN ('1', 'A') `;
-      replacements.codAs = codAs.trim();
+    } else if (areaNorm === 'EMPA' || areaNorm === 'EMPAQUE') {
+      // --PPTT (Producto Terminado, literal garavito.sql)
+      query = `
+        SELECT t.COD_ART,
+               t.Desc_Art,
+               t.DESC_ETIQUETA,
+               t2.DESC_SUB_CAT,
+               t.SUB_CAT_ART,
+               es.especie
+          FROM ARTICULO t
+          JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
+          inner join tg_especies es on t2.cat_art=es.cat_art
+          inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+         WHERE
+           t.FLAG_ESTADO IN ('1', 'A')
+           AND (
+                 UPPER(t.COD_ART)       LIKE '%'|| UPPER(trim(:busqueda)) ||'%'
+              OR UPPER(t.Desc_Art)  LIKE  '%'||UPPER(:busqueda) ||'%'
+              OR UPPER(t.DESC_ETIQUETA) LIKE '%'||UPPER(:busqueda)||'%'
+           )
+           and pc.cod_as = :codAs
+           and t.cod_clase='01'
+         ORDER BY t.Desc_Art
+         FETCH FIRST 20 ROWS ONLY
+      `;
+    } else {
+      // --ARTICULO CONGELADO | PROCESO (literal garavito.sql)
+      query = `
+        SELECT t.cod_art_cong,
+               t.descr ,
+               '' as DESC_ETIQUETA,
+               t2.DESC_SUB_CAT,
+               t.cod_subcat,
+               es.especie
+          FROM ARTICULO_CONGE t
+          JOIN ARTICULO_SUB_CATEG t2 ON t.cod_subcat = t2.COD_SUB_CAT
+          join articulo_categ t3 on t2.cat_art=t3.cat_art
+          inner join tg_especies es on t3.cat_art=es.cat_art
+          inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+         WHERE (
+                 UPPER(t.cod_art_cong)       LIKE '%'|| UPPER(trim(:busqueda)) ||'%'
+              OR UPPER(t.descr)  LIKE  '%'||UPPER(:busqueda) ||'%'
+            )
+           and pc.cod_as = :codAs
+         ORDER BY t.descr
+         FETCH FIRST 20 ROWS ONLY
+      `;
     }
 
-    if (subCat && subCat.trim() !== '') {
-      subCatWhere = ` AND (
-        UPPER(t.SUB_CAT_ART) LIKE UPPER(:subCat)
-        OR UPPER(t2.DESC_SUB_CAT) LIKE UPPER(:subCat)
-        OR UPPER(t2.CAT_ART) LIKE UPPER(:subCat)
-      ) `;
-      replacements.subCat = `%${subCat.trim()}%`;
-    }
+    const rows = await db.execute(query, replacements);
+    return rows.map(r => {
+      const low = this.toLowercaseKeys(r);
+      low.cod_art = low.cod_art || r.COD_ART || r.COD_ART_CONG || '';
+      low.COD_ART = low.cod_art;
 
-    if (busqueda && busqueda.trim() !== '') {
-      busquedaWhere = ` AND (
-        UPPER(t.COD_ART)       LIKE UPPER(:busqueda)
-        OR UPPER(t.NOM_ARTICULO)  LIKE UPPER(:busqueda)
-        OR UPPER(t.DESC_ETIQUETA) LIKE UPPER(:busqueda)
-      ) `;
-      replacements.busqueda = `%${busqueda.trim()}%`;
-    }
+      low.nom_articulo = low.nom_articulo || r.NOM_ARTICULO || r.DESC_ART || r.DESCR || '';
+      low.NOM_ARTICULO = low.nom_articulo;
 
-    const query = `
-      SELECT DISTINCT
-             t.COD_ART,
-             t.NOM_ARTICULO,
-             t.DESC_ETIQUETA,
-             t2.DESC_SUB_CAT,
-             t.SUB_CAT_ART,
-             (
-               SELECT MAX(tg.ESPECIE)
-               FROM TG_ESPECIES tg
-               WHERE tg.SUB_CAT_ART = t.SUB_CAT_ART
-                  OR tg.CAT_ART = t2.CAT_ART
-                  OR tg.COD_ART = t.COD_ART
-             ) as ESPECIE
-        FROM ARTICULO t
-        JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
-        ${areaJoin}
-       WHERE t.COD_CLASE   = '01'
-         AND t.FLAG_ESTADO IN ('1', 'A')
-         ${areaWhere}
-         ${subCatWhere}
-         ${busquedaWhere}
-       ORDER BY t.NOM_ARTICULO
-       FETCH FIRST 30 ROWS ONLY
-    `;
-    return await db.execute(query, replacements);
+      low.desc_sub_cat = low.desc_sub_cat || r.DESC_SUB_CAT || '';
+      low.DESC_SUB_CAT = low.desc_sub_cat;
+
+      low.desc_etiqueta = low.desc_etiqueta || r.DESC_ETIQUETA || '';
+      low.DESC_ETIQUETA = low.desc_etiqueta;
+
+      low.sub_cat_art = low.sub_cat_art || r.SUB_CAT_ART || r.COD_SUBCAT || '';
+      low.SUB_CAT_ART = low.sub_cat_art;
+
+      low.especie = low.especie || r.ESPECIE || '';
+      low.ESPECIE = low.especie;
+
+      return low;
+    });
   }
 
   // Obtener causas de desviación filtradas por área y artículo

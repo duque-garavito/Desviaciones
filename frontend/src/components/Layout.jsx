@@ -68,15 +68,14 @@ function Layout({ usuario, children }) {
   return (
     <div className="layout-root">
 
-      {/* Botón de menú hamburguesa flotante premium */}
+      {/* Botón de menú hamburguesa (solo icono, desaparece al abrir sidebar) */}
       <button
-        className={`hamburger-btn ${sidebarOpen ? 'abierto' : ''}`}
-        onClick={() => setSidebarOpen(prev => !prev)}
+        className={`hamburger-btn ${sidebarOpen ? 'oculto' : ''}`}
+        onClick={() => setSidebarOpen(true)}
         aria-label="Menú"
-        title="Alternar Menú Principal"
+        title="Menú"
       >
-        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        <span className="hamburger-label">{sidebarOpen ? 'Cerrar' : 'Menú'}</span>
+        <Menu size={26} />
       </button>
 
 
