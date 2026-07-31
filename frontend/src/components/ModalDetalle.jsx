@@ -42,8 +42,8 @@ function ModalDetalle({ id, isOpen, onClose }) {
       <div
         className="modal-detalle"
         style={{
-          maxWidth: registrosGroup.length > 1 ? '95%' : '720px',
-          width: registrosGroup.length > 1 ? '1200px' : '90%'
+          maxWidth: registrosGroup.length > 1 ? '99%' : '1150px',
+          width: registrosGroup.length > 1 ? '1500px' : '92%'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -76,7 +76,6 @@ function ModalDetalle({ id, isOpen, onClose }) {
 
                 return (
                   <div className="detalle-info-grid">
-
                     <div className="detalle-info-item">
                       <label>Inspector</label>
                       <span>{baseReg.inspector}</span>
@@ -129,11 +128,162 @@ function ModalDetalle({ id, isOpen, onClose }) {
                         </th>
                       ))}
                     </tr>
+                    {/* Fila 1: Cantidad Muestreada */}
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
+                        Cantidad Muestreada
+                      </th>
+                      {registrosGroup.map(reg => {
+                        let val = 0;
+                        if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
+                          val = parseInt(reg.cant_muestra) || 0;
+                        } else {
+                          const muestraAns = reg.respuestas?.find(r => 
+                            r.pregunta?.toUpperCase().includes('MUESTR') ||
+                            r.pregunta?.toUpperCase().includes('CANTIDAD') ||
+                            r.pregunta?.toUpperCase().includes('EVALUAD')
+                          );
+                          if (muestraAns && muestraAns.resp_number !== null && muestraAns.resp_number !== undefined) {
+                            val = parseInt(muestraAns.resp_number) || 0;
+                          } else if (reg.respuestas?.[0]?.resp_number !== null && reg.respuestas?.[0]?.resp_number !== undefined) {
+                            val = parseInt(reg.respuestas[0].resp_number) || 0;
+                          }
+                        }
+                        return (
+                          <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: '#000000', backgroundColor: '#F5F8FC' }}>
+                            {val}
+                          </th>
+                        );
+                      })}
+                    </tr>
+
+                    {/* Fila 2: Cantidad Sin Defecto */}
+                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
+                        Cantidad Sin Defecto
+                      </th>
+                      {registrosGroup.map(reg => {
+                        let cantMuestraNum = 0;
+                        if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
+                          cantMuestraNum = parseInt(reg.cant_muestra) || 0;
+                        } else {
+                          const muestraAns = reg.respuestas?.find(r => 
+                            r.pregunta?.toUpperCase().includes('MUESTR') ||
+                            r.pregunta?.toUpperCase().includes('CANTIDAD') ||
+                            r.pregunta?.toUpperCase().includes('EVALUAD')
+                          );
+                          if (muestraAns && muestraAns.resp_number !== null) {
+                            cantMuestraNum = parseInt(muestraAns.resp_number) || 0;
+                          }
+                        }
+
+                        // Extraer números de muestra únicos que tuvieron desvío
+                        const muestrasConDesvioSet = new Set();
+                        reg.respuestas?.forEach(ans => {
+                          if (ans.resp_varchar) {
+                            const matches = ans.resp_varchar.matchAll(/Muestra (\d+):/g);
+                            for (const m of matches) {
+                              muestrasConDesvioSet.add(m[1]);
+                            }
+                          }
+                        });
+
+                        let totalDesviadas = muestrasConDesvioSet.size;
+                        if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
+                          totalDesviadas = Math.min(reg.causas.length, cantMuestraNum || 1);
+                        }
+
+                        const sinDefecto = Math.max(0, cantMuestraNum - totalDesviadas);
+
+                        return (
+                          <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: '#000000', backgroundColor: '#F5F8FC' }}>
+                            {sinDefecto}
+                          </th>
+                        );
+                      })}
+                    </tr>
+
+                    {/* Fila 3: Cantidad Desviada (Con Defecto) */}
+                    <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
+                      <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
+                        Cantidad Desviada (Con Defecto)
+                      </th>
+                      {registrosGroup.map(reg => {
+                        let cantMuestraNum = 0;
+                        if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
+                          cantMuestraNum = parseInt(reg.cant_muestra) || 0;
+                        }
+
+                        const muestrasConDesvioSet = new Set();
+                        reg.respuestas?.forEach(ans => {
+                          if (ans.resp_varchar) {
+                            const matches = ans.resp_varchar.matchAll(/Muestra (\d+):/g);
+                            for (const m of matches) {
+                              muestrasConDesvioSet.add(m[1]);
+                            }
+                          }
+                        });
+
+                        let totalDesviadas = muestrasConDesvioSet.size;
+                        if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
+                          totalDesviadas = Math.min(reg.causas.length, cantMuestraNum || 1);
+                        }
+
+                        return (
+                          <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: totalDesviadas > 0 ? '#dc2626' : '#000000', backgroundColor: '#F5F8FC' }}>
+                            {totalDesviadas}
+                          </th>
+                        );
+                      })}
+                    </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      const pregs = registrosGroup[0]?.respuestas || [];
-                      return pregs.map((p, pIdx) => {
+                      const todasPregs = registrosGroup[0]?.respuestas || [];
+                      // Separar campos de texto (tipo V) de los de muestreo
+                      const camposTexto = todasPregs.filter(p => p.tipo_campo === 'V');
+                      const pregs = todasPregs.filter(p => p.tipo_campo !== 'V');
+
+                      return (
+                        <>
+                          {/* Bloque de campos de recepción (tipo V) */}
+                          {camposTexto.length > 0 && (
+                            <tr>
+                              <td colSpan={registrosGroup.length + 1} style={{ padding: 0 }}>
+                                <div style={{
+                                  background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+                                  border: '1.5px solid #bfdbfe',
+                                  borderRadius: '10px',
+                                  margin: '8px 4px',
+                                  padding: '14px 18px',
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '20px',
+                                  alignItems: 'flex-start'
+                                }}>
+                                  <div style={{ fontWeight: '700', fontSize: '12px', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.06em', width: '100%', marginBottom: '4px' }}>
+                                    📋 Datos de Recepción
+                                  </div>
+                                  {camposTexto.map(campo => {
+                                    const val = registrosGroup[0]?.respuestas?.find(r => r.cod_pregunta === campo.cod_pregunta)?.resp_varchar;
+                                    return (
+                                      <div key={campo.cod_pregunta} style={{ minWidth: '150px' }}>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                                          {campo.pregunta}
+                                        </div>
+                                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>
+                                          {val || '—'}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Filas del muestreo */}
+                          {pregs.map((p, pIdx) => {
                         const isMainRow = pIdx < 3;
                         const isFirstDeviation = pIdx === 3;
 
@@ -244,8 +394,10 @@ function ModalDetalle({ id, isOpen, onClose }) {
                               );
                             })}
                           </tr>
-                        );
-                      });
+                         );
+                          })}
+                        </>
+                      );
                     })()}
                   </tbody>
                 </table>

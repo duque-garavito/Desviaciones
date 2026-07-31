@@ -5,7 +5,7 @@ import { Calendar, Sun, Moon } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import './Dashboard.css';
 
-function Dashboard({ usuario }) {
+function Dashboard({ usuario, onLogout }) {
   const navigate = useNavigate();
   const currentUser = usuario || { nombre: 'Invitado', perfil: 'Desconocido' };
 
@@ -30,7 +30,7 @@ function Dashboard({ usuario }) {
   }, [currentUser]);
 
   return (
-    <Layout usuario={currentUser}>
+    <Layout usuario={currentUser} onLogout={onLogout}>
       <div className="dashboard-container">
 
         <div className="inspector-view">
@@ -53,28 +53,57 @@ function Dashboard({ usuario }) {
                   </thead>
                   <tbody>
                     {programacionInspector.length > 0 ? (
-                      programacionInspector.map((p, idx) => (
-                        <tr key={idx} className="clickable" onClick={() => navigate('/inspecciones')}>
-                          <td>
-                            <strong>
-                              {(() => {
-                                const [y, m, d] = p.FECHA.split('-').map(Number);
-                                return new Date(y, m - 1, d).toLocaleDateString('es-PE', {
-                                  weekday: 'long',
-                                  day: 'numeric',
-                                  month: 'short'
-                                });
-                              })()}
-                            </strong>
-                          </td>
-                          <td>{p.area}</td>
-                          <td>
-                            <span className={`badge-turno ${p.TURNO === 'Noche' ? 'noche' : 'día'}`}>
-                              {p.TURNO === 'Noche' ? <Moon size={12} /> : <Sun size={12} />} {p.TURNO}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
+                      programacionInspector.map((p, idx) => {
+                        const todayStr = new Date().toLocaleDateString('sv-SE'); // Formato YYYY-MM-DD local
+                        const isToday = p.FECHA === todayStr;
+
+                        return (
+                          <tr
+                            key={idx}
+                            className={isToday ? "clickable" : "disabled-row"}
+                            onClick={() => {
+                              if (isToday) navigate('/inspecciones');
+                            }}
+                            style={{
+                              cursor: isToday ? 'pointer' : 'not-allowed',
+                              opacity: isToday ? 1 : 0.55
+                            }}
+                          >
+                            <td>
+                              <strong>
+                                {(() => {
+                                  const [y, m, d] = p.FECHA.split('-').map(Number);
+                                  return new Date(y, m - 1, d).toLocaleDateString('es-PE', {
+                                    weekday: 'long',
+                                    day: 'numeric',
+                                    month: 'short'
+                                  });
+                                })()}
+                              </strong>
+                              {isToday && (
+                                <span style={{
+                                  marginLeft: '10px',
+                                  fontSize: '11px',
+                                  background: '#22c55e',
+                                  color: 'white',
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
+                                  fontWeight: 'bold',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  Hoy
+                                </span>
+                              )}
+                            </td>
+                            <td>{p.area}</td>
+                            <td>
+                              <span className={`badge-turno ${p.TURNO === 'Noche' ? 'noche' : 'día'}`}>
+                                {p.TURNO === 'Noche' ? <Moon size={12} /> : <Sun size={12} />} {p.TURNO}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan="3" style={{ textAlign: 'center', padding: '30px', color: '#888' }}>

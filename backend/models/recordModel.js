@@ -50,7 +50,7 @@ class RecordModel {
         rc.COD_REP_C as id,
         rc.COD_RV,
         rc.NRO_REF as lote,
-        art.NOM_ARTICULO as nom_articulo,
+        COALESCE(art.NOM_ARTICULO, artc.DESCR) as nom_articulo,
         rc.TIPO_REF as tipo_ref,
         rc.FEC_REGISTRO as fecha_raw,
         u.NOMBRE as inspector,
@@ -68,6 +68,7 @@ class RecordModel {
       LEFT JOIN AREAS_SUPERVISION a ON pcd.COD_AS = a.COD_AS
       LEFT JOIN USUARIO u ON rc.COD_USR = u.COD_USR
       LEFT JOIN ARTICULO art ON TRIM(rc.NRO_REF) = TRIM(art.COD_ART)
+      LEFT JOIN ARTICULO_CONGE artc ON TRIM(rc.NRO_REF) = TRIM(artc.COD_ART_CONG)
       ${whereClause}
       ORDER BY rc.FEC_REGISTRO DESC
     `, replacements);
@@ -200,6 +201,22 @@ class RecordModel {
             desc_etiqueta: (art.desc_etiqueta || '').trim(),
             sub_cat_art: (art.sub_cat_art || '').trim()
           };
+        } else {
+          // Buscar en ARTICULO_CONGE si no está en ARTICULO
+          const artCongeResult = await db.execute(`
+            SELECT DESCR as NOM_ARTICULO, '' as DESC_ETIQUETA, COD_SUBCAT as SUB_CAT_ART
+            FROM ARTICULO_CONGE
+            WHERE TRIM(COD_ART_CONG) = :lote
+            FETCH FIRST 1 ROWS ONLY
+          `, { lote: loteValue });
+          if (artCongeResult.length > 0) {
+            const artC = this.toLowercaseKeys(artCongeResult[0]);
+            articuloInfo = {
+              nom_articulo: (artC.nom_articulo || '').trim(),
+              desc_etiqueta: '',
+              sub_cat_art: (artC.sub_cat_art || '').trim()
+            };
+          }
         }
       } catch (err) {
         console.error('[getById] Error al buscar artículo:', err.message);
@@ -228,9 +245,26 @@ class RecordModel {
     `, { codRepC });
     const normalizedCausas = causasDet.map(c => this.toLowercaseKeys(c));
 
+    let cantMuestra = null;
+    try {
+      const cantRes = await db.execute(`
+        SELECT CANT_MUESTRA
+          FROM REPORTE_RESPUESTAS_DESVIACION_ARTICULO
+         WHERE COD_REP_C = :codRepC
+         FETCH FIRST 1 ROWS ONLY
+      `, { codRepC });
+      if (cantRes.length > 0) {
+        const row = this.toLowercaseKeys(cantRes[0]);
+        cantMuestra = row.cant_muestra !== null && row.cant_muestra !== undefined ? row.cant_muestra : null;
+      }
+    } catch (err) {
+      console.error('[getById] Error leyendo CANT_MUESTRA:', err.message);
+    }
+
     return {
       ...normalizedHeader,
       ...articuloInfo,
+      cant_muestra: cantMuestra,
       fecha: this.formatDate(normalizedHeader.fecha_raw),
       hora_inicio: this.formatDateTime(normalizedHeader.fecha_raw),
       hora_fin: this.formatDateTime(normalizedHeader.fecha_raw),

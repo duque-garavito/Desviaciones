@@ -37,28 +37,56 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/"
+          element={
+            usuarioActual ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
-        <Route path="/login" element={<Login onLoginExitoso={setUsuarioActual} />} />
+        <Route
+          path="/login"
+          element={
+            usuarioActual ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Login onLoginExitoso={setUsuarioActual} />
+            )
+          }
+        />
 
         <Route path="/dashboard" element={
           <RutaProtegida>
-            <Dashboard usuario={usuarioActual} />
+            <Dashboard usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
           </RutaProtegida>
         } />
 
         <Route path="/inspecciones" element={
           <RutaProtegida>
-            <Inspecciones usuario={usuarioActual} />
+            <Inspecciones usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
           </RutaProtegida>
         } />
 
         <Route path="/registros" element={
           <RutaProtegida>
-            <Registros usuario={usuarioActual} />
+            <Registros usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
           </RutaProtegida>
         } />
 
+        <Route
+          path="*"
+          element={
+            usuarioActual ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
       </Routes>
     </Router>
   );

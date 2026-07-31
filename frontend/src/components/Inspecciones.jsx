@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
-import { Search, Loader2, CheckCircle2, AlertCircle, Package, ChevronRight, Check, Save } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, AlertCircle, AlertTriangle, Package, ChevronRight, Check, Save } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import './Inspecciones.css';
 
@@ -142,22 +142,154 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
 }
 
 /* ════════════════════════════════════════════════
+   PANTALLA 1b – Campos de texto (solo Recepción)
+════════════════════════════════════════════════ */
+function PantallaCamposTexto({ preguntasTexto, onConfirmar, onCancelar }) {
+  const [valores, setValores] = useState(() => {
+    const init = {};
+    preguntasTexto.forEach(p => { init[p.id] = ''; });
+    return init;
+  });
+  const [focusedId, setFocusedId] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleChange = (id, val) => {
+    setValores(prev => ({ ...prev, [id]: val }));
+    if (error) setError(null);
+  };
+
+  const handleConfirmar = () => {
+    const vacios = preguntasTexto.filter(p => !valores[p.id]?.trim());
+    if (vacios.length > 0) {
+      setError(`Complete el campo: ${vacios[0].texto}`);
+      return;
+    }
+    setError(null);
+    onConfirmar(valores);
+  };
+
+  return (
+    <div className="ins-pantalla-articulo">
+      <div className="ins-articulo-header">
+        <div className="ins-header-info">
+          <div className="ins-header-icon-badge">
+            <Save size={22} />
+          </div>
+          <div>
+            <h2 className="ins-header-title">Datos de Recepción</h2>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px' }}>
+              Complete todos los campos antes de iniciar el muestreo
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '8px 4px', display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '600px', width: '100%' }}>
+        {preguntasTexto.map(p => {
+          const isFocused = focusedId === p.id;
+          const hasValue = Boolean(valores[p.id]?.trim());
+          return (
+            <div key={p.id}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{
+                  fontWeight: '700',
+                  fontSize: '12px',
+                  color: isFocused ? '#3b82f6' : 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  transition: 'color 0.2s'
+                }}>
+                  {p.texto} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+              </div>
+              <input
+                type="text"
+                value={valores[p.id] || ''}
+                onChange={e => handleChange(p.id, e.target.value)}
+                placeholder={`Ingrese ${p.texto.toLowerCase()}...`}
+                onFocus={() => setFocusedId(p.id)}
+                onBlur={() => setFocusedId(null)}
+                style={{
+                  width: '100%',
+                  padding: '13px 16px',
+                  borderRadius: '12px',
+                  border: `2px solid ${isFocused ? '#3b82f6' : hasValue ? '#93c5fd' : 'var(--border-color, #e2e8f0)'}`,
+                  background: isFocused ? '#eff6ff' : hasValue ? '#eff6ff' : 'var(--surface)',
+                  color: 'var(--text-primary)',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isFocused ? '0 0 0 4px rgba(59,130,246,0.12)' : 'none'
+                }}
+              />
+            </div>
+          );
+        })}
+
+        {error && (
+          <div style={{
+            background: '#fef2f2',
+            border: '1.5px solid #fca5a5',
+            borderRadius: '10px',
+            padding: '10px 14px',
+            color: '#dc2626',
+            fontSize: '13px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+          <button
+            className="ins-modal-no"
+            style={{ flex: 1, padding: '13px' }}
+            onClick={onCancelar}
+          >
+            ← Volver
+          </button>
+          <button
+            className="ins-modal-yes"
+            style={{ flex: 2, padding: '13px', fontSize: '15px' }}
+            onClick={handleConfirmar}
+          >
+            Continuar al Muestreo →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════
    PANTALLA 2 – Formulario de inspección (muestra a muestra)
 ════════════════════════════════════════════════ */
 function PantallaFormulario({
   articulo,
+  codRepC,
   conteoMuestra,
   formularioInfo,
   preguntas,
+  camposTextoValues,
   usuario,
   onFinalizar,
-  onCambiarArticulo
+  onCambiarArticulo,
+  draftRestaurado,
+  alertaRestauracion
 }) {
-  const [muestraActual, setMuestraActual] = useState(1);
+  // Separar preguntas tipo V (texto) de las numéricas/binarias
+  const preguntasMuestreo = preguntas.filter(p => p.tipo_campo !== 'V');
+
+  const [muestraActual, setMuestraActual] = useState(() => draftRestaurado?.muestraActual || 1);
   const [desviacionSeleccionada, setDesviacionSeleccionada] = useState(null);
   const [causaSeleccionada, setCausaSeleccionada] = useState(null);
 
-  const [muestrasGuardadas, setMuestrasGuardadas] = useState([]);
+  const [muestrasGuardadas, setMuestrasGuardadas] = useState(() => draftRestaurado?.muestrasGuardadas || []);
 
   const [desviacionesDisponibles, setDesviacionesDisponibles] = useState([]);
   const [cargandoDesviaciones, setCargandoDesviaciones] = useState(false);
@@ -173,6 +305,75 @@ function PantallaFormulario({
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
+  // Auto-guardar borrador local Y sincronizar en BD de Oracle ante cualquier cambio en las muestras
+  useEffect(() => {
+    if (articulo && usuario?.id && muestrasGuardadas.length > 0) {
+      try {
+        const draftObj = {
+          articulo,
+          codRepC,
+          conteoMuestra,
+          formularioInfo,
+          preguntas,
+          camposTextoValues,
+          muestraActual,
+          muestrasGuardadas,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(`draft_inspeccion_${usuario.id}`, JSON.stringify(draftObj));
+      } catch (err) {
+        console.error("Error guardando borrador local:", err);
+      }
+    }
+
+    const sincronizarProgresoEnBD = async () => {
+      if (codRepC && muestrasGuardadas.length > 0) {
+        try {
+          const muestrasConDesvio = muestrasGuardadas.filter(m => !m.sinDefecto);
+          const respuestasMuestreo = preguntasMuestreo.map(p => {
+            const desviosDeEstaPregunta = muestrasConDesvio.filter(m => m.desviacionCod === p.id || m.desviacionLabel === p.texto);
+            const countDesvios = desviosDeEstaPregunta.length;
+            if (p.tipo_campo === 'N' || countDesvios > 0) {
+              return {
+                cod_pregunta: p.id,
+                resp_char: null,
+                resp_number: countDesvios,
+                resp_varchar: null,
+                causas: desviosDeEstaPregunta.map(m => ({
+                  cod_mcd: m.causaCod,
+                  cod_sub_cat: m.causaSubCat,
+                  cod_especi: m.causaEspeci
+                })).filter(c => c.cod_mcd)
+              };
+            }
+            return {
+              cod_pregunta: p.id,
+              resp_char: p.tipo_campo === 'B' ? 'S' : null,
+              resp_number: null,
+              resp_varchar: null,
+              causas: []
+            };
+          });
+
+          await fetch(`${API_BASE_URL}/api/inspecciones/sincronizar-progreso`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cod_rep_c: codRepC,
+              cod_rv: formularioInfo?.cod_rv,
+              cod_usr: usuario?.id,
+              respuestas: respuestasMuestreo,
+              conteo_muestra: String(muestrasGuardadas.length)
+            })
+          });
+        } catch (err) {
+          console.error("Error sincronizando avance en BD Oracle:", err);
+        }
+      }
+    };
+    sincronizarProgresoEnBD();
+  }, [muestrasGuardadas, codRepC, articulo, usuario, conteoMuestra, formularioInfo, preguntas, camposTextoValues, muestraActual]);
+
   useEffect(() => {
     const cargarDesviaciones = async () => {
       if (!articulo) return;
@@ -181,9 +382,12 @@ function PantallaFormulario({
         const params = new URLSearchParams();
         if (formularioInfo?.cod_area) params.set('cod_as', formularioInfo.cod_area);
         if (articulo?.COD_ART) params.set('cod_art', String(articulo.COD_ART).trim());
+        const subCatVal = articulo?.SUB_CAT_ART || articulo?.SUB_CAT || articulo?.COD_SUBCAT;
+        if (subCatVal) params.set('cod_sub_cat', String(subCatVal).trim());
 
         const res = await fetch(`${API_BASE_URL}/api/inspecciones/desviaciones-articulo?${params.toString()}`);
         const data = await res.json();
+        // Solo devolver desviaciones que correspondan a preguntas de muestreo (tipo N)
         if (data.success) setDesviacionesDisponibles(data.desviaciones || []);
       } catch {
         setDesviacionesDisponibles([]);
@@ -304,23 +508,27 @@ function PantallaFormulario({
       const totalDesvios = muestrasConDesvio.length;
       const totalSinDefecto = muestrasGuardadas.filter(m => m.sinDefecto).length;
 
-      const respuestasArray = preguntas.map(p => {
+      // Construir respuestas: primero los campos de texto (tipo V) con sus valores ya ingresados
+      const preguntasTexto = preguntas.filter(p => p.tipo_campo === 'V');
+      const respuestasTexto = preguntasTexto.map(p => ({
+        cod_pregunta: p.id,
+        resp_char: null,
+        resp_number: null,
+        resp_varchar: (camposTextoValues && camposTextoValues[p.id]) ? camposTextoValues[p.id].trim() : null,
+        causas: []
+      }));
+
+      // Luego las respuestas del muestreo (tipo N/B)
+      const respuestasMuestreo = preguntasMuestreo.map(p => {
         const desviosDeEstaPregunta = muestrasConDesvio.filter(m => m.desviacionCod === p.id || m.desviacionLabel === p.texto);
         const countDesvios = desviosDeEstaPregunta.length;
 
         if (p.tipo_campo === 'N' || countDesvios > 0) {
-          let respVarchar = null;
-          if (countDesvios > 0) {
-            const serialized = desviosDeEstaPregunta.map(m =>
-              `Muestra ${m.nro}: ${m.desviacionLabel} - ${m.causaLabel} (Cant: 1)`
-            ).join(' | ');
-            respVarchar = `Causas: ${serialized}`;
-          }
           return {
             cod_pregunta: p.id,
             resp_char: null,
             resp_number: countDesvios,
-            resp_varchar: respVarchar,
+            resp_varchar: null,
             causas: desviosDeEstaPregunta.map(m => ({
               cod_mcd: m.causaCod,
               cod_sub_cat: m.causaSubCat,
@@ -332,10 +540,12 @@ function PantallaFormulario({
           cod_pregunta: p.id,
           resp_char: p.tipo_campo === 'B' ? 'S' : null,
           resp_number: null,
-          resp_varchar: p.tipo_campo === 'V' ? '' : null,
+          resp_varchar: null,
           causas: []
         };
       });
+
+      const respuestasArray = [...respuestasTexto, ...respuestasMuestreo];
 
       const res = await fetch(`${API_BASE_URL}/api/inspecciones/guardar`, {
         method: 'POST',
@@ -354,6 +564,9 @@ function PantallaFormulario({
       });
       const data = await res.json();
       if (data.success) {
+        if (usuario?.id) {
+          localStorage.removeItem(`draft_inspeccion_${usuario.id}`);
+        }
         setMensaje({ tipo: 'success', texto: '¡Reporte guardado correctamente!' });
         setTimeout(() => {
           setMensaje(null);
@@ -377,10 +590,44 @@ function PantallaFormulario({
 
   return (
     <div className="ins-formulario-container">
+      {alertaRestauracion && (
+        <div style={{
+          backgroundColor: '#fffbeb',
+          border: '2px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '12px 18px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          boxShadow: '0 4px 15px rgba(245, 158, 11, 0.18)'
+        }}>
+          <div style={{
+            backgroundColor: '#fef3c7',
+            borderRadius: '50%',
+            padding: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <AlertTriangle size={24} color="#d97706" />
+          </div>
+          <div>
+            <h4 style={{ margin: 0, color: '#92400e', fontSize: '15px', fontWeight: '700' }}>
+              ⚠️ Inspección pendiente detectada
+            </h4>
+            <p style={{ margin: '2px 0 0 0', color: '#b45309', fontSize: '13.5px', fontWeight: '600' }}>
+              {alertaRestauracion}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="ins-form-header">
         <button className="ins-btn-finalizar" onClick={handleFinalizarReporte} disabled={enviando}>
           {enviando ? <Loader2 size={14} className="spinner" /> : null}
-          <Save size={20} />Finalizar Reporte
+          <Save size={20} />Finalizar Muestreo
         </button>
         <div className="ins-articulo-nombre">
           {articulo?.COD_ART} {articulo?.NOM_ARTICULO ? `- ${articulo.NOM_ARTICULO}` : ''}
@@ -391,12 +638,14 @@ function PantallaFormulario({
         </button>
       </div>
 
-      {mensaje && (
-        <div className={`ins-toast ${mensaje.tipo}`}>
-          {mensaje.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          <span>{mensaje.texto}</span>
-        </div>
-      )}
+      {
+        mensaje && (
+          <div className={`ins-toast ${mensaje.tipo}`}>
+            {mensaje.tipo === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span>{mensaje.texto}</span>
+          </div>
+        )
+      }
 
       <div className="ins-form-body">
         <div className="ins-muestra-row">
@@ -459,7 +708,7 @@ function PantallaFormulario({
             return (
               <>
                 <p className="ins-seleccione-label">Seleccione una categoría y motivo causa</p>
-                
+
                 {categoriasUnicas.length > 0 && (
                   <div className="ins-tabs-categorias">
                     <button
@@ -516,123 +765,128 @@ function PantallaFormulario({
       </div>
 
       {/* ══ MODAL DE CONFIRMACIÓN ══ */}
-      {mostrarConfirm && (
-        <div className="ins-modal-overlay">
-          <div className="ins-modal-card">
-            <h3>Confirmar Muestra</h3>
-            <p>
-              ¿Desea registrar la <strong>Muestra N° {muestraActual}</strong>{' '}
-              {causaSeleccionada ? (
-                <>con la desviación: <strong>{desviacionSeleccionada?.motivo_desviacion}</strong> - <strong>{causaSeleccionada.descr}</strong>?</>
-              ) : (
-                <><strong>Sin Defecto</strong>?</>
-              )}
-            </p>
-            <div className="ins-modal-acciones">
-              <button
-                className="ins-modal-no"
-                onClick={() => {
-                  setMostrarConfirm(false);
-                  setCausaSeleccionada(null);
-                }}
-              >
-                Cancelar
-              </button>
-              <button className="ins-modal-yes" onClick={confirmarGuardar}>
-                Confirmar
-              </button>
+      {
+        mostrarConfirm && (
+          <div className="ins-modal-overlay">
+            <div className="ins-modal-card">
+              <h3>Confirmar Muestra</h3>
+              <p>
+                ¿Desea registrar la <strong>Muestra N° {muestraActual}</strong>{' '}
+                {causaSeleccionada ? (
+                  <>con la desviación: <strong>{desviacionSeleccionada?.motivo_desviacion}</strong> - <strong>{causaSeleccionada.descr}</strong>?</>
+                ) : (
+                  <><strong>Sin Defecto</strong>?</>
+                )}
+              </p>
+              <div className="ins-modal-acciones">
+                <button
+                  className="ins-modal-no"
+                  onClick={() => {
+                    setMostrarConfirm(false);
+                    setCausaSeleccionada(null);
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button className="ins-modal-yes" onClick={confirmarGuardar}>
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* ══ MODAL DE CONFIRMACIÓN DE FINALIZAR REPORTE ══ */}
-      {confirmarFinalizar && (
-        <div className="ins-modal-overlay">
-          <div className="ins-modal-card">
-            <h3>Finalizar Reporte</h3>
-            <p>
-              ¿Desea finalizar el reporte para este artículo? Se registrarán{' '}
-              <strong>{muestrasGuardadas.length}</strong> muestras en total.
-            </p>
-            <div className="ins-modal-acciones">
-              <button
-                className="ins-modal-no"
-                onClick={() => setConfirmarFinalizar(false)}
-              >
-                Cancelar
-              </button>
-              <button className="ins-modal-yes" onClick={ejecutarFinalizarReporte}>
-                Confirmar
-              </button>
+      {
+        confirmarFinalizar && (
+          <div className="ins-modal-overlay">
+            <div className="ins-modal-card">
+              <h3>Finalizar Reporte</h3>
+              <p>
+                ¿Desea finalizar el reporte para este artículo? Se registrarán{' '}
+                <strong>{muestrasGuardadas.length}</strong> muestras en total.
+              </p>
+              <div className="ins-modal-acciones">
+                <button
+                  className="ins-modal-no"
+                  onClick={() => setConfirmarFinalizar(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="ins-modal-yes" onClick={ejecutarFinalizarReporte}>
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
       {/* ══ MODAL DE CONFIRMACIÓN DE CAMBIAR ARTÍCULO ══ */}
-      {confirmarCambiarArticulo && (
-        <div className="ins-modal-overlay">
-          <div className="ins-modal-card">
-            <h3>¿Cambiar de Artículo?</h3>
-            {muestrasGuardadas.length > 0 ? (
-              <>
-                <p>
-                  Tiene <strong>{muestrasGuardadas.length}</strong> muestras registradas para este artículo. ¿Desea guardar este reporte antes de cambiar?
-                </p>
-                <div className="ins-modal-acciones vertical">
-                  <button
-                    className="ins-modal-yes"
-                    onClick={() => {
-                      setConfirmarCambiarArticulo(false);
-                      ejecutarFinalizarReporte('cambiarArticulo');
-                    }}
-                  >
-                    Guardar y Cambiar
-                  </button>
-                  <button
-                    className="ins-modal-no descartar"
-                    onClick={() => {
-                      setConfirmarCambiarArticulo(false);
-                      onCambiarArticulo();
-                    }}
-                  >
-                    Descartar y Cambiar
-                  </button>
-                  <button
-                    className="ins-modal-no"
-                    onClick={() => setConfirmarCambiarArticulo(false)}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p>
-                  Se perderá la selección actual. ¿Desea cambiar de artículo?
-                </p>
-                <div className="ins-modal-acciones">
-                  <button
-                    className="ins-modal-no"
-                    onClick={() => setConfirmarCambiarArticulo(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    className="ins-modal-yes"
-                    onClick={() => {
-                      setConfirmarCambiarArticulo(false);
-                      onCambiarArticulo();
-                    }}
-                  >
-                    Descartar y Cambiar
-                  </button>
-                </div>
-              </>
-            )}
+      {
+        confirmarCambiarArticulo && (
+          <div className="ins-modal-overlay">
+            <div className="ins-modal-card">
+              <h3>¿Cambiar de Artículo?</h3>
+              {muestrasGuardadas.length > 0 ? (
+                <>
+                  <p>
+                    Tiene <strong>{muestrasGuardadas.length}</strong> muestras registradas para este artículo. ¿Desea guardar este reporte antes de cambiar?
+                  </p>
+                  <div className="ins-modal-acciones vertical">
+                    <button
+                      className="ins-modal-yes"
+                      onClick={() => {
+                        setConfirmarCambiarArticulo(false);
+                        ejecutarFinalizarReporte('cambiarArticulo');
+                      }}
+                    >
+                      Guardar y Cambiar
+                    </button>
+                    <button
+                      className="ins-modal-no descartar"
+                      onClick={() => {
+                        setConfirmarCambiarArticulo(false);
+                        onCambiarArticulo();
+                      }}
+                    >
+                      Descartar y Cambiar
+                    </button>
+                    <button
+                      className="ins-modal-no"
+                      onClick={() => setConfirmarCambiarArticulo(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Se perderá la selección actual. ¿Desea cambiar de artículo?
+                  </p>
+                  <div className="ins-modal-acciones">
+                    <button
+                      className="ins-modal-no"
+                      onClick={() => setConfirmarCambiarArticulo(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      className="ins-modal-yes"
+                      onClick={() => {
+                        setConfirmarCambiarArticulo(false);
+                        onCambiarArticulo();
+                      }}
+                    >
+                      Descartar y Cambiar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
@@ -640,18 +894,104 @@ function PantallaFormulario({
 /* ════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
 ════════════════════════════════════════════════ */
-function Inspecciones({ usuario }) {
+function Inspecciones({ usuario, onLogout }) {
   const navigate = useNavigate();
 
-  // pantalla: 'inicio' | 'seleccion' | 'formulario'
+  // pantalla: 'inicio' | 'seleccion' | 'campos' | 'formulario'
   const [pantalla, setPantalla] = useState('seleccion');
   const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
   const [confirmarArticulo, setConfirmarArticulo] = useState(null);
   const [conteoMuestra, setConteoMuestra] = useState('');
   const [formularioInfo, setFormularioInfo] = useState(null);
   const [preguntas, setPreguntas] = useState([]);
+  const [camposTextoValues, setCamposTextoValues] = useState(null); // valores Procedencia/Camara/Proveedor
+  const [codRepC, setCodRepC] = useState(null); // Código de cabecera creado en Oracle BD
+  const [draftRestaurado, setDraftRestaurado] = useState(null);
+  const [alertaRestauracion, setAlertaRestauracion] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+
+  // Restaurar borrador pendiente (consulta BD de Oracle e integra memoria local si existe)
+  useEffect(() => {
+    if (!usuario?.id) return;
+
+    const restaurarInspeccion = async () => {
+      let draftLocal = null;
+      try {
+        const draftStr = localStorage.getItem(`draft_inspeccion_${usuario.id}`);
+        if (draftStr) draftLocal = JSON.parse(draftStr);
+      } catch (e) {
+        console.error('Error leyendo borrador local:', e);
+      }
+
+      // Si existe borrador en memoria local completa con muestras, cargarlo de inmediato
+      if (draftLocal && draftLocal.articulo && Array.isArray(draftLocal.muestrasGuardadas) && draftLocal.muestrasGuardadas.length > 0) {
+        setArticuloSeleccionado(draftLocal.articulo);
+        if (draftLocal.codRepC) setCodRepC(draftLocal.codRepC);
+        if (draftLocal.conteoMuestra) setConteoMuestra(draftLocal.conteoMuestra);
+        if (draftLocal.formularioInfo) setFormularioInfo(draftLocal.formularioInfo);
+        if (draftLocal.preguntas) setPreguntas(draftLocal.preguntas);
+        if (draftLocal.camposTextoValues) setCamposTextoValues(draftLocal.camposTextoValues);
+        setDraftRestaurado(draftLocal);
+        setPantalla('formulario');
+        setAlertaRestauracion('Tiene una inspección abierta pendiente que debe finalizar.');
+        return;
+      }
+
+      // Si se limpió el caché / datos de la tablet, consultar directamente a la BD de Oracle
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/inspecciones/borrador-activo/${usuario.id}`);
+        const data = await res.json();
+        if (data.success && data.draft) {
+          const draftBD = data.draft;
+          setCodRepC(draftBD.cod_rep_c);
+          setArticuloSeleccionado(draftBD.articulo);
+          
+          const muestrasReconstruidas = [];
+          const respuestasMuestreo = draftBD.respuestas.filter(r => r.resp_number !== null || r.resp_char !== null);
+          const respuestasDesvio = respuestasMuestreo.filter(r => r.resp_number > 0);
+
+          let nroMuestra = 1;
+          respuestasDesvio.forEach(r => {
+            const countDesvios = Number(r.resp_number || 0);
+            for (let i = 0; i < countDesvios; i++) {
+              const causaMatch = draftBD.causas[i] || draftBD.causas.find(c => c.item === r.item);
+              muestrasReconstruidas.push({
+                nro: nroMuestra++,
+                desviacionCod: r.cod_pregunta,
+                desviacionLabel: 'Desviación registrada',
+                causaCod: causaMatch?.cod_mcd || null,
+                causaLabel: causaMatch?.descr_causa || null,
+                causaSubCat: causaMatch?.cod_sub_cat || null,
+                sinDefecto: false
+              });
+            }
+          });
+
+          setDraftRestaurado({
+            muestraActual: muestrasReconstruidas.length + 1,
+            muestrasGuardadas: muestrasReconstruidas
+          });
+          setPantalla('formulario');
+          setAlertaRestauracion('Tiene una inspección abierta pendiente que debe finalizar.');
+        }
+      } catch (e) {
+        console.error('Error restaurando borrador activo desde BD:', e);
+      }
+    };
+
+    restaurarInspeccion();
+  }, [usuario]);
+
+  // Auto-ocultar alerta de restauración a los 5 segundos
+  useEffect(() => {
+    if (alertaRestauracion) {
+      const timer = setTimeout(() => {
+        setAlertaRestauracion(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [alertaRestauracion]);
 
   // Cargar formulario del inspector al montar
   useEffect(() => {
@@ -661,7 +1001,7 @@ function Inspecciones({ usuario }) {
         const res = await fetch(`${API_BASE_URL}/api/inspecciones/formulario-hoy/${usuario.id}`);
         const data = await res.json();
         if (data.success) {
-          setFormularioInfo({
+          setFormularioInfo(prev => prev || {
             nombre: data.formulario,
             area: data.area,
             cod_area: data.cod_area,
@@ -670,9 +1010,8 @@ function Inspecciones({ usuario }) {
             cod_rv: data.cod_rv,
             cod_reporte: data.cod_reporte
           });
-          setPreguntas(data.preguntas || []);
+          setPreguntas(prev => (prev && prev.length > 0) ? prev : (data.preguntas || []));
         } else {
-          // Sin programación, el inspector puede continuar
           console.warn('Sin programación activa:', data.message);
         }
       } catch (err) {
@@ -686,7 +1025,7 @@ function Inspecciones({ usuario }) {
         ].join('\n\n');
         alert(`⚠️ Error en Inspecciones:\n\n${detalleError}`);
         setError('No se pudo conectar con el servidor.');
-          } finally {
+      } finally {
         setCargando(false);
       }
     };
@@ -702,6 +1041,7 @@ function Inspecciones({ usuario }) {
   const confirmarInicioInspeccion = async (art) => {
     setConfirmarArticulo(null);
     setArticuloSeleccionado(art);
+    setDraftRestaurado(null);
 
     let currentFormInfo = formularioInfo;
 
@@ -730,22 +1070,109 @@ function Inspecciones({ usuario }) {
       }
     }
 
+    // Si el área es RECE y hay preguntas de texto (tipo V), ir primero a la pantalla de campos
+    const preguntasFinales = currentFormInfo ? preguntas : [];
+    const preguntasV = (preguntasFinales.length > 0 ? preguntasFinales : preguntas).filter(p => p.tipo_campo === 'V');
+    const esRecepcion = (currentFormInfo?.cod_area || formularioInfo?.cod_area || '').trim().toUpperCase() === 'RECE';
+
+    if (esRecepcion && preguntasV.length > 0) {
+      setPantalla('campos');
+    } else {
+      // Crear cabecera directamente en la BD Oracle
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cod_rv: (currentFormInfo || formularioInfo)?.cod_rv,
+            nro_ref: art.COD_ART,
+            cod_usr: usuario?.id,
+            camposTexto: []
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.cod_rep_c) {
+          setCodRepC(data.cod_rep_c);
+        }
+      } catch (e) {
+        console.error("Error creando cabecera en Oracle:", e);
+      }
+      setPantalla('formulario');
+    }
+  };
+
+  const handleCrearCabeceraConCampos = async (vals) => {
+    setCamposTextoValues(vals);
+    try {
+      const preguntasV = preguntas.filter(p => p.tipo_campo === 'V');
+      const camposPayload = preguntasV.map(p => ({
+        cod_pregunta: p.id,
+        resp_varchar: vals[p.id] ? vals[p.id].trim() : null
+      }));
+
+      const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cod_rv: formularioInfo?.cod_rv,
+          nro_ref: articuloSeleccionado?.COD_ART,
+          cod_usr: usuario?.id,
+          camposTexto: camposPayload
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.cod_rep_c) {
+        setCodRepC(data.cod_rep_c);
+      }
+    } catch (e) {
+      console.error("Error creando cabecera con campos en Oracle:", e);
+    }
     setPantalla('formulario');
   };
 
-  const handleCambiarArticulo = () => {
+  const handleCambiarArticulo = async () => {
+    if (codRepC) {
+      try {
+        await fetch(`${API_BASE_URL}/api/inspecciones/cancelar-borrador`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cod_rep_c: codRepC })
+        });
+      } catch (e) {
+        console.error("Error cancelando borrador:", e);
+      }
+    }
+    if (usuario?.id) {
+      localStorage.removeItem(`draft_inspeccion_${usuario.id}`);
+    }
     setArticuloSeleccionado(null);
+    setCodRepC(null);
+    setDraftRestaurado(null);
+    setCamposTextoValues(null);
     setPantalla('seleccion');
   };
 
   const handleFinalizar = () => {
+    if (usuario?.id) {
+      localStorage.removeItem(`draft_inspeccion_${usuario.id}`);
+    }
     setArticuloSeleccionado(null);
+    setCodRepC(null);
     setConteoMuestra('');
+    setDraftRestaurado(null);
+    setCamposTextoValues(null);
     setPantalla('seleccion');
   };
 
+  const inspeccionEnProgreso = pantalla === 'formulario' && articuloSeleccionado !== null;
+
   return (
-    <Layout usuario={usuario}>
+    <Layout
+      usuario={usuario}
+      inspeccionEnProgreso={inspeccionEnProgreso}
+      onConfirmarSalida={handleFinalizar}
+      onLogout={onLogout}
+    >
       <div className="inspecciones-container">
         {cargando ? (
           <div className="ins-cargando">
@@ -794,15 +1221,28 @@ function Inspecciones({ usuario }) {
               </div>
             )}
           </>
+        ) : pantalla === 'campos' ? (
+          <PantallaCamposTexto
+            preguntasTexto={preguntas.filter(p => p.tipo_campo === 'V')}
+            onConfirmar={handleCrearCabeceraConCampos}
+            onCancelar={() => {
+              setArticuloSeleccionado(null);
+              setPantalla('seleccion');
+            }}
+          />
         ) : (
           <PantallaFormulario
             articulo={articuloSeleccionado}
+            codRepC={codRepC}
             conteoMuestra={conteoMuestra}
             formularioInfo={formularioInfo}
             preguntas={preguntas}
+            camposTextoValues={camposTextoValues}
             usuario={usuario}
             onFinalizar={handleFinalizar}
             onCambiarArticulo={handleCambiarArticulo}
+            draftRestaurado={draftRestaurado}
+            alertaRestauracion={alertaRestauracion}
           />
         )}
       </div>

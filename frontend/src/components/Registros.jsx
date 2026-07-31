@@ -18,7 +18,7 @@ import {
 import ModalDetalle from './ModalDetalle';
 import './Registros.css';
 
-function Registros({ usuario }) {
+function Registros({ usuario, onLogout }) {
   const navigate = useNavigate();
   // Estados principales
   const [registros, setRegistros] = useState([]);
@@ -188,7 +188,7 @@ function Registros({ usuario }) {
   };
 
   return (
-    <Layout usuario={usuario}>
+    <Layout usuario={usuario} onLogout={onLogout}>
       <div className="registros-container">
 
         {/* Encabezado */}
@@ -260,20 +260,6 @@ function Registros({ usuario }) {
             <h3><ClipboardList size={16} /> Inspecciones Registradas</h3>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <div className="toggle-container" style={{ display: 'flex', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                {/*<button 
-                  className={`toggle-btn ${vistaMode === 'tabla' ? 'active' : ''}`}
-                  onClick={() => setVistaMode('tabla')}
-                  style={{ padding: '6px 12px', border: 'none', background: vistaMode === 'tabla' ? 'var(--color-primary)' : 'transparent', color: vistaMode === 'tabla' ? 'white' : 'var(--color-text-main)', cursor: 'pointer', fontWeight: '600', fontSize: '12px' }}
-                >
-                  Vista Tabla
-                </button>*/}
-                {/*<button 
-                  className={`toggle-btn ${vistaMode === 'matriz' ? 'active' : ''}`}
-                  onClick={() => { setVistaMode('matriz'); cargarDetallesMatriz(); }}
-                  style={{ padding: '6px 12px', border: 'none', background: vistaMode === 'matriz' ? 'var(--color-primary)' : 'transparent', color: vistaMode === 'matriz' ? 'white' : 'var(--color-text-main)', cursor: 'pointer', fontWeight: '600', fontSize: '12px' }}
-                >
-                  Vista Excel
-                </button>*/}
               </div>
               <span className="tabla-info">{total} registro(s) encontrado(s)</span>
             </div>
@@ -326,14 +312,6 @@ function Registros({ usuario }) {
                             >
                               <Eye size={10} /> Ver
                             </button>
-                            {/*<button
-                              type="button"
-                              className="btn-ver-detalle"
-                              style={{ padding: '2px 8px', fontSize: '10px', backgroundColor: 'var(--color-primary)', color: 'white', borderColor: 'white' }}
-                              onClick={() => navigate(`/inspecciones?editId=${reg.id}`)}
-                            >
-                              <Edit3 size={10} /> Editar
-                            </button>*/}
                           </div>
                         </th>
                       ))}
@@ -476,7 +454,7 @@ function Registros({ usuario }) {
                       <th>Inspector</th>
                       <th>Formulario</th>
                       <th>Artículo / Ref.</th>
-                      <th>Respuestas</th>
+                      {/*<th>Respuestas</th>
                       {/*<th>Acciones</th>*/}
                     </tr>
                   </thead>
@@ -493,7 +471,7 @@ function Registros({ usuario }) {
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal' }}>{reg.nom_articulo}</div>
                           )}
                         </td>
-                        <td style={{ textAlign: 'center', fontWeight: '700', color: '#1756a6' }}>{reg.total_respuestas}</td>
+                       {/*} <td style={{ textAlign: 'center', fontWeight: '700', color: '#1756a6' }}>{reg.total_respuestas}</td>
                         {/*<td style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button
                             className="btn-ver-detalle"

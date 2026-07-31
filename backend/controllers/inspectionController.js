@@ -20,9 +20,9 @@ const getMyForm = async (req, res) => {
 };
 
 const save = async (req, res) => {
-  const { cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin } = req.body;
+  const { cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin, conteo_muestra } = req.body;
   try {
-    const result = await InspectionModel.saveInspection(cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin);
+    const result = await InspectionModel.saveInspection(cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin, conteo_muestra);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -61,10 +61,49 @@ const getDeviationCauses = async (req, res) => {
 };
 
 const getDeviationsByArticle = async (req, res) => {
-  const { cod_as, cod_art } = req.query;
+  const { cod_as, cod_art, cod_sub_cat } = req.query;
   try {
-    const desviaciones = await InspectionModel.getDeviationsByArticle(cod_as, cod_art);
+    const desviaciones = await InspectionModel.getDeviationsByArticle(cod_as, cod_art, cod_sub_cat);
     res.json({ success: true, desviaciones });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const createHeader = async (req, res) => {
+  const { cod_rv, nro_ref, cod_usr, camposTexto } = req.body;
+  try {
+    const result = await InspectionModel.createHeader(cod_rv, nro_ref, cod_usr, camposTexto);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const syncProgress = async (req, res) => {
+  const { cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra } = req.body;
+  try {
+    const result = await InspectionModel.syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const cancelDraft = async (req, res) => {
+  const { cod_rep_c } = req.body;
+  try {
+    const result = await InspectionModel.cancelDraft(cod_rep_c);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getActiveDraft = async (req, res) => {
+  try {
+    const draft = await InspectionModel.getActiveDraftForToday(req.params.codUsr);
+    res.json({ success: true, draft });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -74,6 +113,10 @@ module.exports = {
   getMyForm,
   save,
   update,
+  createHeader,
+  syncProgress,
+  cancelDraft,
+  getActiveDraft,
   buscarArticulos,
   getDeviationCauses,
   getDeviationsByArticle

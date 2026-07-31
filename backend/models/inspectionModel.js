@@ -92,9 +92,35 @@ class InspectionModel {
   }
 
   // Guardar respuestas de una inspección
-  static async saveInspection(cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin) {
+  static async saveInspection(cod_rv, nro_ref, cod_usr, respuestas, hora_inicio, hora_fin, conteo_muestra) {
     const conn = await db.getConnection();
     try {
+      // Resolver TIPO_REF dinámicamente desde la tabla de origen del artículo
+      let tipoRef = 'MP  ';
+      if (nro_ref && nro_ref.trim() !== '') {
+        const artCode = String(nro_ref).trim();
+        // Buscar primero en ARTICULO
+        const artNormal = await conn.execute(
+          `SELECT TRIM(COD_CLASE) as COD_CLASE FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`,
+          { artCode }
+        );
+        if (artNormal.rows && artNormal.rows.length > 0) {
+          const codClase = artNormal.rows[0][0];
+          if (codClase === '21') tipoRef = 'MP  ';       // Materia Prima
+          else if (codClase === '01') tipoRef = 'PPTT';  // Producto Terminado
+          else tipoRef = 'MP  ';
+        } else {
+          // Si no está en ARTICULO, buscar en ARTICULO_CONGE
+          const artConge = await conn.execute(
+            `SELECT TRIM(COD_ART_CONG) FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :artCode`,
+            { artCode }
+          );
+          if (artConge.rows && artConge.rows.length > 0) {
+            tipoRef = 'CONG';  // Congelado / Proceso
+          }
+        }
+      }
+
       // 1. Insertar Cabecera y Artículo usando el Procedimiento Almacenado de Oracle
       const result = await conn.execute(
         `BEGIN 
@@ -105,11 +131,11 @@ class InspectionModel {
          END;`,
         {
           ls_COD_RV: cod_rv,
-          ls_TIPO_REF: 'MP  ',
+          ls_TIPO_REF: tipoRef,
           ls_NRO_REF: nro_ref || 'DEFAULT',
           ls_COD_USR: cod_usr,
           ls_cod_art: nro_ref || 'DEFAULT',
-          ls_tipo_art: 'MP  ',
+          ls_tipo_art: tipoRef,
           ls_COD_REP_C: { type: db.oracledb.DB_TYPE_VARCHAR, dir: db.oracledb.BIND_OUT, maxSize: 12 }
         }
       );
@@ -140,8 +166,6 @@ class InspectionModel {
           }
         );
 
-
-
         // Causas de desviación si existen
         if (r.causas && Array.isArray(r.causas)) {
           for (const c of r.causas) {
@@ -171,8 +195,293 @@ class InspectionModel {
         }
       );
 
+      // 4. Registrar la cantidad exacta de muestras evaluadas ingresada por el inspector
+      if (conteo_muestra && !isNaN(parseInt(conteo_muestra))) {
+        const cantVal = parseInt(conteo_muestra);
+        await conn.execute(
+          `UPDATE REPORTE_RESPUESTAS_DESVIACION_ARTICULO
+              SET CANT_MUESTRA = :cantVal
+            WHERE COD_REP_C = :cod_rep_c`,
+          { cantVal, cod_rep_c }
+        );
+      }
+
       await conn.commit();
       return { success: true, cod_rep_c };
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      if (conn) await conn.close();
+    }
+  }
+
+  // Crear cabecera de inspección al iniciar (y registrar datos de recepción si existen)
+  static async createHeader(cod_rv, nro_ref, cod_usr, camposTexto) {
+    const conn = await db.getConnection();
+    try {
+      let tipoRef = 'MP  ';
+      if (nro_ref && nro_ref.trim() !== '') {
+        const artCode = String(nro_ref).trim();
+        const artNormal = await conn.execute(
+          `SELECT TRIM(COD_CLASE) as COD_CLASE FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`,
+          { artCode }
+        );
+        if (artNormal.rows && artNormal.rows.length > 0) {
+          const codClase = artNormal.rows[0][0];
+          if (codClase === '21') tipoRef = 'MP  ';
+          else if (codClase === '01') tipoRef = 'PPTT';
+          else tipoRef = 'MP  ';
+        } else {
+          const artConge = await conn.execute(
+            `SELECT TRIM(COD_ART_CONG) FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :artCode`,
+            { artCode }
+          );
+          if (artConge.rows && artConge.rows.length > 0) {
+            tipoRef = 'CONG';
+          }
+        }
+      }
+
+      // 1. Insertar Cabecera
+      const result = await conn.execute(
+        `BEGIN 
+           USP_INSERTA_REPORTE_RESPUESTAS(
+             :ls_COD_RV, :ls_TIPO_REF, :ls_NRO_REF, :ls_COD_USR, 
+             :ls_COD_REP_C, :ls_cod_art, :ls_tipo_art
+           ); 
+         END;`,
+        {
+          ls_COD_RV: cod_rv,
+          ls_TIPO_REF: tipoRef,
+          ls_NRO_REF: nro_ref || 'DEFAULT',
+          ls_COD_USR: cod_usr,
+          ls_cod_art: nro_ref || 'DEFAULT',
+          ls_tipo_art: tipoRef,
+          ls_COD_REP_C: { type: db.oracledb.DB_TYPE_VARCHAR, dir: db.oracledb.BIND_OUT, maxSize: 12 }
+        }
+      );
+
+      const cod_rep_c = result.outBinds.ls_COD_REP_C;
+
+      // 2. Si vienen campos de texto (ej. Recepción: Procedencia, Cámara, Proveedor), registrarlos
+      if (camposTexto && Array.isArray(camposTexto)) {
+        for (const ct of camposTexto) {
+          await conn.execute(
+            `BEGIN
+               USP_INSERTA_REPORTE_RESPUESTAS_DET(
+                 :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
+                 :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
+                 :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR
+               );
+             END;`,
+            {
+              ls_COD_REP_C: cod_rep_c,
+              ls_COD_PREGUNTA: ct.cod_pregunta,
+              ls_COD_RV: cod_rv,
+              ls_RESP_BLOB: { type: db.oracledb.DB_TYPE_BLOB, val: null },
+              ls_RESP_TIPO_BLOB: { type: db.oracledb.DB_TYPE_VARCHAR, val: null },
+              ls_RESP_CHAR: null,
+              ln_RESP_NUMBER: null,
+              ls_RESP_VARCHAR: ct.resp_varchar || null,
+              ls_COD_USR: cod_usr
+            }
+          );
+        }
+      }
+
+      await conn.commit();
+      return { success: true, cod_rep_c };
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      if (conn) await conn.close();
+    }
+  }
+
+  // Guardar/Actualizar progreso incremental de muestras en BD de Oracle
+  static async syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra) {
+    const conn = await db.getConnection();
+    try {
+      // 1. Limpiar causas y respuestas numéricas anteriores de este reporte para sobreescribir el avance
+      await conn.execute(`DELETE FROM REPORTE_RESPUESTAS_DET_CAUSAS WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
+      
+      // Limpiar detalles de preguntas N (muestreo) manteniendo los de tipo V si ya se registraron
+      await conn.execute(`
+        DELETE FROM REPORTE_RESPUESTAS_DET 
+        WHERE COD_REP_C = :cod_rep_c 
+          AND COD_PREGUNTA IN (
+            SELECT COD_PREGUNTA FROM MAESTRO_PREGUNTAS WHERE TIPO_CAMPO != 'V'
+          )
+      `, { cod_rep_c });
+
+      // 2. Re-insertar respuestas actualizadas del muestreo
+      for (let i = 0; i < respuestas.length; i++) {
+        const r = respuestas[i];
+        if (r.tipo_campo === 'V') continue; // Los campos V ya están insertados
+
+        await conn.execute(
+          `BEGIN
+             USP_INSERTA_REPORTE_RESPUESTAS_DET(
+               :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
+               :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
+               :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR
+             );
+           END;`,
+          {
+            ls_COD_REP_C: cod_rep_c,
+            ls_COD_PREGUNTA: r.cod_pregunta,
+            ls_COD_RV: cod_rv,
+            ls_RESP_BLOB: { type: db.oracledb.DB_TYPE_BLOB, val: null },
+            ls_RESP_TIPO_BLOB: { type: db.oracledb.DB_TYPE_VARCHAR, val: null },
+            ls_RESP_CHAR: r.resp_char || null,
+            ln_RESP_NUMBER: r.resp_number !== undefined && r.resp_number !== null ? Number(r.resp_number) : null,
+            ls_RESP_VARCHAR: r.resp_varchar || null,
+            ls_COD_USR: cod_usr
+          }
+        );
+
+        if (r.causas && Array.isArray(r.causas)) {
+          for (const c of r.causas) {
+            const codMcd = typeof c === 'object' ? c.cod_mcd : c;
+            const codSubCat = typeof c === 'object' ? c.cod_sub_cat : null;
+
+            await conn.execute(`
+              INSERT INTO REPORTE_RESPUESTAS_DET_CAUSAS (COD_REP_C, ITEM, COD_MCD, COD_SUB_CAT)
+              VALUES (:cod_rep_c, :item, :codMcd, :codSubCat)
+            `, {
+              cod_rep_c,
+              item: i + 1,
+              codMcd,
+              codSubCat: codSubCat || null
+            });
+          }
+        }
+      }
+
+      // 3. Actualizar desvíos por artículo
+      await conn.execute(
+        `BEGIN
+           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C);
+         END;`,
+        { ls_COD_REP_C: cod_rep_c }
+      );
+
+      if (conteo_muestra && !isNaN(parseInt(conteo_muestra))) {
+        const cantVal = parseInt(conteo_muestra);
+        await conn.execute(
+          `UPDATE REPORTE_RESPUESTAS_DESVIACION_ARTICULO
+              SET CANT_MUESTRA = :cantVal
+            WHERE COD_REP_C = :cod_rep_c`,
+          { cantVal, cod_rep_c }
+        );
+      }
+
+      await conn.commit();
+      return { success: true, cod_rep_c };
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      if (conn) await conn.close();
+    }
+  }
+
+  // Consultar en Oracle si el inspector tiene una inspección iniciada hoy
+  static async getActiveDraftForToday(cod_usr) {
+    const conn = await db.getConnection();
+    try {
+      const resHeader = await conn.execute(`
+        SELECT rr.COD_REP_C, rr.COD_RV, rr.TIPO_REF, TRIM(rr.NRO_REF) as NRO_REF
+        FROM REPORTE_RESPUESTAS rr
+        WHERE TRIM(rr.COD_USR) = :cod_usr
+          AND rr.FEC_REGISTRO >= SYSDATE - 2
+        ORDER BY rr.FEC_REGISTRO DESC
+        FETCH FIRST 1 ROWS ONLY
+      `, { cod_usr: String(cod_usr).trim() });
+
+      if (!resHeader.rows || resHeader.rows.length === 0) {
+        return null;
+      }
+
+      const row = resHeader.rows[0];
+      const cod_rep_c = row[0];
+      const cod_rv = row[1];
+      const nro_ref = row[3];
+
+      // Buscar detalles de respuestas en BD si existen
+      const resDet = await conn.execute(`
+        SELECT rrd.ITEM, rrd.COD_PREGUNTA, rrd.RESP_CHAR, rrd.RESP_NUMBER, rrd.RESP_VARCHAR
+        FROM REPORTE_RESPUESTAS_DET rrd
+        WHERE rrd.COD_REP_C = :cod_rep_c
+        ORDER BY rrd.ITEM ASC
+      `, { cod_rep_c });
+
+      const respuestas = resDet.rows || [];
+
+      // Buscar info del artículo
+      let articulo = { COD_ART: nro_ref };
+      const artNormal = await conn.execute(
+        `SELECT TRIM(COD_ART) as COD_ART, NOM_ARTICULO FROM ARTICULO WHERE TRIM(COD_ART) = :nro_ref`,
+        { nro_ref }
+      );
+      if (artNormal.rows && artNormal.rows.length > 0) {
+        articulo = { COD_ART: artNormal.rows[0][0], NOM_ARTICULO: artNormal.rows[0][1] };
+      } else {
+        const artConge = await conn.execute(
+          `SELECT TRIM(COD_ART_CONG) as COD_ART, DESCR as NOM_ARTICULO FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :nro_ref`,
+          { nro_ref }
+        );
+        if (artConge.rows && artConge.rows.length > 0) {
+          articulo = { COD_ART: artConge.rows[0][0], NOM_ARTICULO: artConge.rows[0][1] };
+        }
+      }
+
+      // Buscar causas asociadas
+      const resCausas = await conn.execute(`
+        SELECT rrdc.ITEM, rrdc.COD_MCD, mcd.DESCR as DESCR_CAUSA, rrdc.COD_SUB_CAT
+        FROM REPORTE_RESPUESTAS_DET_CAUSAS rrdc
+        LEFT JOIN MAESTRO_CAUSAS_DESVIACION mcd ON rrdc.COD_MCD = mcd.COD_MCD
+        WHERE rrdc.COD_REP_C = :cod_rep_c
+      `, { cod_rep_c });
+
+      return {
+        cod_rep_c,
+        cod_rv,
+        articulo,
+        respuestas: respuestas.map(r => ({
+          item: r[0],
+          cod_pregunta: r[1],
+          resp_char: r[2],
+          resp_number: r[3],
+          resp_varchar: r[4]
+        })),
+        causas: (resCausas.rows || []).map(c => ({
+          item: c[0],
+          cod_mcd: c[1],
+          descr_causa: c[2],
+          cod_sub_cat: c[3]
+        }))
+      };
+    } catch (error) {
+      console.error("Error obteniendo borrador activo de BD Oracle:", error);
+      return null;
+    } finally {
+      if (conn) await conn.close();
+    }
+  }
+
+  // Cancelar borrador (en caso de que el usuario descarte voluntariamente la inspección)
+  static async cancelDraft(cod_rep_c) {
+    const conn = await db.getConnection();
+    try {
+      await conn.execute(`DELETE FROM REPORTE_RESPUESTAS_DET_CAUSAS WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
+      await conn.execute(`DELETE FROM REPORTE_RESPUESTAS_DESVIACION_ARTICULO WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
+      await conn.execute(`DELETE FROM REPORTE_RESPUESTAS_DET WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
+      await conn.execute(`DELETE FROM REPORTE_RESPUESTAS WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
+      await conn.commit();
+      return { success: true };
     } catch (error) {
       await conn.rollback();
       throw error;
@@ -353,18 +662,33 @@ class InspectionModel {
   }
 
   // Obtener causas de desviación filtradas por área y artículo
+  // Obtener causas de desviación filtradas por área y artículo / subcategoría
   static async getDeviationCauses(codReporte, codAs, codSubCat, codArt) {
-    // 1. Consulta filtrada por artículo + área
-    if (codArt && codArt.trim() !== '') {
+    let subCat = codSubCat ? String(codSubCat).trim() : null;
+
+    if (!subCat && codArt && codArt.trim() !== '') {
+      const artCode = String(codArt).trim();
+      const art1 = await db.execute(`SELECT SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`, { artCode });
+      if (art1.length > 0 && art1[0].SUB_CAT_ART) {
+        subCat = String(art1[0].SUB_CAT_ART).trim();
+      } else {
+        const art2 = await db.execute(`SELECT COD_SUBCAT FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :artCode`, { artCode });
+        if (art2.length > 0 && art2[0].COD_SUBCAT) {
+          subCat = String(art2[0].COD_SUBCAT).trim();
+        }
+      }
+    }
+
+    if (subCat) {
       let areaWhere = '';
-      const replacements = { codArt: String(codArt).trim() };
+      const replacements = { subCat };
 
       if (codAs && codAs.trim() !== '') {
         areaWhere = ' AND pcd.COD_AS = :codAs ';
         replacements.codAs = String(codAs).trim();
       }
 
-      const queryArticle = `
+      const querySubCat = `
         SELECT MIN(mcd.COD_MCD) as COD_MCD,
                mcd.DESCR,
                MIN(cc.DESCR) as CATEGORIA,
@@ -373,15 +697,14 @@ class InspectionModel {
           JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
           JOIN MAESTRO_CAUSAS_DESVIACION_FILTRO mcdf ON mcd.COD_MCD = mcdf.COD_MCD
           JOIN PLANTILLA_CAUSA_DESVIACION pcd ON TRIM(mcdf.COD_SUB_CAT) = TRIM(pcd.COD_SUB_CAT)
-          JOIN ARTICULO a ON TRIM(mcdf.COD_SUB_CAT) = TRIM(a.SUB_CAT_ART)
-         WHERE TRIM(a.COD_ART) = :codArt
+         WHERE TRIM(mcdf.COD_SUB_CAT) = :subCat
            ${areaWhere}
          GROUP BY mcd.DESCR
          ORDER BY mcd.DESCR
       `;
-      const causasArt = await db.execute(queryArticle, replacements);
-      if (causasArt.length > 0) {
-        return causasArt.map(r => this.toLowercaseKeys(r));
+      const causasSub = await db.execute(querySubCat, replacements);
+      if (causasSub.length > 0) {
+        return causasSub.map(r => this.toLowercaseKeys(r));
       }
     }
 
@@ -400,9 +723,22 @@ class InspectionModel {
     return causas.map(r => this.toLowercaseKeys(r));
   }
 
-  // Obtener motivos de desviación asociados a un artículo y área
-  static async getDeviationsByArticle(codAs, codArt) {
-    if (!codAs && !codArt) return [];
+  // Obtener motivos de desviación asociados a un artículo / subcategoría y área
+  static async getDeviationsByArticle(codAs, codArt, codSubCat) {
+    let subCat = codSubCat ? String(codSubCat).trim() : null;
+
+    if (!subCat && codArt && codArt.trim() !== '') {
+      const artCode = String(codArt).trim();
+      const art1 = await db.execute(`SELECT SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`, { artCode });
+      if (art1.length > 0 && art1[0].SUB_CAT_ART) {
+        subCat = String(art1[0].SUB_CAT_ART).trim();
+      } else {
+        const art2 = await db.execute(`SELECT COD_SUBCAT FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :artCode`, { artCode });
+        if (art2.length > 0 && art2[0].COD_SUBCAT) {
+          subCat = String(art2[0].COD_SUBCAT).trim();
+        }
+      }
+    }
 
     let whereClause = " WHERE rv.FLAG_ESTADO IN ('1', 'A') ";
     const replacements = {};
@@ -412,9 +748,9 @@ class InspectionModel {
       replacements.codAs = String(codAs).trim();
     }
 
-    if (codArt && codArt.trim() !== '') {
-      whereClause += " AND TRIM(a.COD_ART) = :codArt ";
-      replacements.codArt = String(codArt).trim();
+    if (subCat) {
+      whereClause += " AND TRIM(pcd.COD_SUB_CAT) = :subCat ";
+      replacements.subCat = subCat;
     }
 
     const query = `
@@ -425,13 +761,34 @@ class InspectionModel {
         JOIN PREGUNTAS_VERSIONADO pv ON mp.COD_PREGUNTA = pv.COD_PREGUNTA
         JOIN REPORTES_VERSIONADO rv ON pv.COD_RV = rv.COD_RV
         JOIN PLANTILLA_CAUSA_DESVIACION pcd ON rv.COD_REPORTE = pcd.COD_REPORTE
-        JOIN ARTICULO a ON pcd.COD_SUB_CAT = a.SUB_CAT_ART
        ${whereClause}
        ORDER BY mp.DESCR
     `;
 
     const rows = await db.execute(query, replacements);
-    return rows.map(r => this.toLowercaseKeys(r));
+    if (rows.length > 0) {
+      return rows.map(r => this.toLowercaseKeys(r));
+    }
+
+    // Fallback: Si no hay coincidencia por subcategoría, devolver preguntas por área
+    if (codAs) {
+      const fallbackQuery = `
+        SELECT DISTINCT 
+               mp.COD_PREGUNTA, 
+               mp.DESCR as MOTIVO_DESVIACION
+          FROM MAESTRO_PREGUNTAS mp
+          JOIN PREGUNTAS_VERSIONADO pv ON mp.COD_PREGUNTA = pv.COD_PREGUNTA
+          JOIN REPORTES_VERSIONADO rv ON pv.COD_RV = rv.COD_RV
+          JOIN PLANTILLA_CAUSA_DESVIACION pcd ON rv.COD_REPORTE = pcd.COD_REPORTE
+         WHERE rv.FLAG_ESTADO IN ('1', 'A')
+           AND pcd.COD_AS = :codAs
+         ORDER BY mp.DESCR
+      `;
+      const fallbackRows = await db.execute(fallbackQuery, { codAs: String(codAs).trim() });
+      return fallbackRows.map(r => this.toLowercaseKeys(r));
+    }
+
+    return [];
   }
 }
 
