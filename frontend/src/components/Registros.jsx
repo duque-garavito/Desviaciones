@@ -466,7 +466,13 @@ function Registros({ usuario, onLogout }) {
                         <td style={{ fontWeight: '600', color: '#0f172a' }}>{reg.inspector}</td>
                         <td style={{ fontSize: '13px' }}>{reg.formulario} <span className="badge-version">v{reg.version}</span></td>
                         <td style={{ fontWeight: '600', color: '#1e293b' }}>
-                          <div>{reg.lote || '—'}</div>
+                          <div>
+                            {(() => {
+                              const lotesArr = (reg.lote || '').split(',').map(s => s.trim()).filter(Boolean);
+                              const lotesUnicos = [...new Set(lotesArr)];
+                              return lotesUnicos.join(', ') || '—';
+                            })()}
+                          </div>
                           {reg.nom_articulo && reg.nom_articulo !== '—' && (
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal' }}>{reg.nom_articulo}</div>
                           )}

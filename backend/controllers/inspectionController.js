@@ -71,9 +71,9 @@ const getDeviationsByArticle = async (req, res) => {
 };
 
 const createHeader = async (req, res) => {
-  const { cod_rv, nro_ref, cod_usr, camposTexto } = req.body;
+  const { cod_rv, nro_ref, cod_usr, parte_produccion, camposTexto } = req.body;
   try {
-    const result = await InspectionModel.createHeader(cod_rv, nro_ref, cod_usr, camposTexto);
+    const result = await InspectionModel.createHeader(cod_rv, nro_ref, cod_usr, parte_produccion, camposTexto);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -81,9 +81,9 @@ const createHeader = async (req, res) => {
 };
 
 const syncProgress = async (req, res) => {
-  const { cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra } = req.body;
+  const { cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra, nro_ref } = req.body;
   try {
-    const result = await InspectionModel.syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra);
+    const result = await InspectionModel.syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra, nro_ref);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -109,6 +109,16 @@ const getActiveDraft = async (req, res) => {
   }
 };
 
+const getPartesProduccion = async (req, res) => {
+  try {
+    const especie = req.query.especie || 'POT';
+    const partes = await InspectionModel.getPartesProduccionRecientes(especie);
+    res.json({ success: true, partes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getMyForm,
   save,
@@ -119,5 +129,7 @@ module.exports = {
   getActiveDraft,
   buscarArticulos,
   getDeviationCauses,
-  getDeviationsByArticle
+  getDeviationsByArticle,
+  getPartesProduccion
 };
+

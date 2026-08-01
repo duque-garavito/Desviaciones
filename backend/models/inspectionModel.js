@@ -126,7 +126,7 @@ class InspectionModel {
         `BEGIN 
            USP_INSERTA_REPORTE_RESPUESTAS(
              :ls_COD_RV, :ls_TIPO_REF, :ls_NRO_REF, :ls_COD_USR, 
-             :ls_COD_REP_C, :ls_cod_art, :ls_tipo_art
+             :ls_COD_REP_C, :ls_cod_art, :ls_tipo_art, :ls_PARTE_PRODUCCION
            ); 
          END;`,
         {
@@ -136,6 +136,7 @@ class InspectionModel {
           ls_COD_USR: cod_usr,
           ls_cod_art: nro_ref || 'DEFAULT',
           ls_tipo_art: tipoRef,
+          ls_PARTE_PRODUCCION: null,
           ls_COD_REP_C: { type: db.oracledb.DB_TYPE_VARCHAR, dir: db.oracledb.BIND_OUT, maxSize: 12 }
         }
       );
@@ -150,7 +151,8 @@ class InspectionModel {
              USP_INSERTA_REPORTE_RESPUESTAS_DET(
                :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
                :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
-               :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR
+               :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR,
+               :ls_COD_ART, :ls_TIPO_ART
              );
            END;`,
           {
@@ -162,7 +164,9 @@ class InspectionModel {
             ls_RESP_CHAR: r.resp_char || null,
             ln_RESP_NUMBER: r.resp_number !== undefined && r.resp_number !== null ? Number(r.resp_number) : null,
             ls_RESP_VARCHAR: r.resp_varchar || null,
-            ls_COD_USR: cod_usr
+            ls_COD_USR: cod_usr,
+            ls_COD_ART: nro_ref || 'DEFAULT',
+            ls_TIPO_ART: tipoRef
           }
         );
 
@@ -188,10 +192,11 @@ class InspectionModel {
       // 3. Ejecutar procedimiento para actualizar el total de muestras con desviación en la relación de cabecera
       await conn.execute(
         `BEGIN
-           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C);
+           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C, :ls_COD_ART);
          END;`,
         {
-          ls_COD_REP_C: cod_rep_c
+          ls_COD_REP_C: cod_rep_c,
+          ls_COD_ART: nro_ref || 'DEFAULT'
         }
       );
 
@@ -216,8 +221,8 @@ class InspectionModel {
     }
   }
 
-  // Crear cabecera de inspección al iniciar (y registrar datos de recepción si existen)
-  static async createHeader(cod_rv, nro_ref, cod_usr, camposTexto) {
+  // Crear cabecera de inspección al iniciar (y registrar datos de recepción y parte de producción)
+  static async createHeader(cod_rv, nro_ref, cod_usr, parte_produccion, camposTexto) {
     const conn = await db.getConnection();
     try {
       let tipoRef = 'MP  ';
@@ -248,7 +253,7 @@ class InspectionModel {
         `BEGIN 
            USP_INSERTA_REPORTE_RESPUESTAS(
              :ls_COD_RV, :ls_TIPO_REF, :ls_NRO_REF, :ls_COD_USR, 
-             :ls_COD_REP_C, :ls_cod_art, :ls_tipo_art
+             :ls_COD_REP_C, :ls_cod_art, :ls_tipo_art, :ls_PARTE_PRODUCCION
            ); 
          END;`,
         {
@@ -258,11 +263,20 @@ class InspectionModel {
           ls_COD_USR: cod_usr,
           ls_cod_art: nro_ref || 'DEFAULT',
           ls_tipo_art: tipoRef,
+          ls_PARTE_PRODUCCION: parte_produccion ? String(parte_produccion).trim() : null,
           ls_COD_REP_C: { type: db.oracledb.DB_TYPE_VARCHAR, dir: db.oracledb.BIND_OUT, maxSize: 12 }
         }
       );
 
       const cod_rep_c = result.outBinds.ls_COD_REP_C;
+
+      // 1b. Si se ingresó Parte de Producción, actualizarlo en la cabecera creada
+      if (parte_produccion && String(parte_produccion).trim() !== '') {
+        await conn.execute(
+          `UPDATE REPORTE_RESPUESTAS SET PARTE_PRODUCCION = :parte WHERE COD_REP_C = :cod_rep_c`,
+          { parte: String(parte_produccion).trim(), cod_rep_c }
+        );
+      }
 
       // 2. Si vienen campos de texto (ej. Recepción: Procedencia, Cámara, Proveedor), registrarlos
       if (camposTexto && Array.isArray(camposTexto)) {
@@ -272,7 +286,8 @@ class InspectionModel {
                USP_INSERTA_REPORTE_RESPUESTAS_DET(
                  :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
                  :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
-                 :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR
+                 :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR,
+                 :ls_COD_ART, :ls_TIPO_ART
                );
              END;`,
             {
@@ -284,7 +299,9 @@ class InspectionModel {
               ls_RESP_CHAR: null,
               ln_RESP_NUMBER: null,
               ls_RESP_VARCHAR: ct.resp_varchar || null,
-              ls_COD_USR: cod_usr
+              ls_COD_USR: cod_usr,
+              ls_COD_ART: nro_ref || 'DEFAULT',
+              ls_TIPO_ART: tipoRef
             }
           );
         }
@@ -301,9 +318,21 @@ class InspectionModel {
   }
 
   // Guardar/Actualizar progreso incremental de muestras en BD de Oracle
-  static async syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra) {
+  static async syncProgress(cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra, nro_ref_param) {
     const conn = await db.getConnection();
     try {
+      // Obtener el artículo (NRO_REF) y TIPO_REF real de la cabecera
+      let codArt = nro_ref_param || 'DEFAULT';
+      let tipoArt = 'MP  ';
+      const resHeader = await conn.execute(
+        `SELECT TRIM(NRO_REF) as NRO_REF, TIPO_REF FROM REPORTE_RESPUESTAS WHERE COD_REP_C = :cod_rep_c`,
+        { cod_rep_c }
+      );
+      if (resHeader.rows && resHeader.rows.length > 0) {
+        if (resHeader.rows[0][0]) codArt = resHeader.rows[0][0];
+        if (resHeader.rows[0][1]) tipoArt = resHeader.rows[0][1];
+      }
+
       // 1. Limpiar causas y respuestas numéricas anteriores de este reporte para sobreescribir el avance
       await conn.execute(`DELETE FROM REPORTE_RESPUESTAS_DET_CAUSAS WHERE COD_REP_C = :cod_rep_c`, { cod_rep_c });
       
@@ -326,7 +355,8 @@ class InspectionModel {
              USP_INSERTA_REPORTE_RESPUESTAS_DET(
                :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
                :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
-               :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR
+               :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR,
+               :ls_COD_ART, :ls_TIPO_ART
              );
            END;`,
           {
@@ -338,7 +368,9 @@ class InspectionModel {
             ls_RESP_CHAR: r.resp_char || null,
             ln_RESP_NUMBER: r.resp_number !== undefined && r.resp_number !== null ? Number(r.resp_number) : null,
             ls_RESP_VARCHAR: r.resp_varchar || null,
-            ls_COD_USR: cod_usr
+            ls_COD_USR: cod_usr,
+            ls_COD_ART: codArt,
+            ls_TIPO_ART: tipoArt
           }
         );
 
@@ -363,9 +395,12 @@ class InspectionModel {
       // 3. Actualizar desvíos por artículo
       await conn.execute(
         `BEGIN
-           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C);
+           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C, :ls_COD_ART);
          END;`,
-        { ls_COD_REP_C: cod_rep_c }
+        { 
+          ls_COD_REP_C: cod_rep_c,
+          ls_COD_ART: codArt
+        }
       );
 
       if (conteo_muestra && !isNaN(parseInt(conteo_muestra))) {
@@ -563,7 +598,7 @@ class InspectionModel {
     let query = '';
 
     if (areaNorm === 'RECE' || areaNorm === 'RECEPCION') {
-      // --MP (Materia Prima, literal garavito.sql)
+      // --MP (Materia Prima)
       query = `
         SELECT t.COD_ART,
                t.Desc_Art,
@@ -705,7 +740,7 @@ class InspectionModel {
       const causasSub = await db.execute(querySubCat, replacements);
       if (causasSub.length > 0) {
         return causasSub.map(r => this.toLowercaseKeys(r));
-      }
+      } 
     }
 
     // 2. Fallback: catálogo maestro completo de causas
@@ -789,6 +824,27 @@ class InspectionModel {
     }
 
     return [];
+  }
+
+  // Obtener Partes de Producción usando la consulta exacta con TG_ESPECIES y FLAG_ESTADO = 1
+  static async getPartesProduccionRecientes() {
+    try {
+      const rows = await db.execute(`
+        SELECT t.COD_PARTE_PRODUCC,
+               TO_CHAR(t.FECHA_PART, 'DD/MM/YYYY') as FECHA_PARTE,
+               t2.DESCR_ESPECIE as ESPECIE,
+               t.DESCRIPCION
+          FROM PARTE_PRODUCCION t, TG_ESPECIES t2
+         WHERE t.ESPECIE = t2.ESPECIE 
+           AND t.FLAG_ESTADO = 1
+         ORDER BY t.FECHA_PART DESC, t.COD_PARTE_PRODUCC DESC
+         FETCH FIRST 20 ROWS ONLY
+      `);
+      return rows.map(r => this.toLowercaseKeys(r));
+    } catch (e) {
+      console.error("Error obteniendo partes de producción con especies:", e);
+      return [];
+    }
   }
 }
 

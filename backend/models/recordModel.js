@@ -163,6 +163,7 @@ class RecordModel {
         pcd.COD_AS as cod_area,
         rc.NRO_REF as lote,
         rc.TIPO_REF as tipo_ref,
+        rc.PARTE_PRODUCCION as parte_produccion,
         rc.FEC_REGISTRO as fecha_raw,
         u.NOMBRE as inspector,
         mr.DESCR as formulario,

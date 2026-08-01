@@ -100,6 +100,12 @@ function ModalDetalle({ id, isOpen, onClose }) {
                       <label>Hora Fin</label>
                       <span>{baseReg.hora_fin || '—'}</span>
                     </div>
+                    {baseReg.parte_produccion && (
+                      <div className="detalle-info-item">
+                        <label>Parte de Producción</label>
+                        <span style={{ fontWeight: '600', color: '#1e40af' }}>{baseReg.parte_produccion}</span>
+                      </div>
+                    )}
                     {getDuracionGroup() && (
                       <div className="detalle-info-item">
                         <label>Duración</label>
@@ -157,89 +163,87 @@ function ModalDetalle({ id, isOpen, onClose }) {
                       })}
                     </tr>
 
-                    {/* Fila 2: Cantidad Sin Defecto */}
-                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
-                        Cantidad Sin Defecto
-                      </th>
-                      {registrosGroup.map(reg => {
-                        let cantMuestraNum = 0;
-                        if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
-                          cantMuestraNum = parseInt(reg.cant_muestra) || 0;
-                        } else {
-                          const muestraAns = reg.respuestas?.find(r => 
-                            r.pregunta?.toUpperCase().includes('MUESTR') ||
-                            r.pregunta?.toUpperCase().includes('CANTIDAD') ||
-                            r.pregunta?.toUpperCase().includes('EVALUAD')
+                      {/* Fila 2: Cantidad Sin Defecto */}
+                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
+                          Cantidad Sin Defecto
+                        </th>
+                        {registrosGroup.map(reg => {
+                          let cantMuestraNum = 0;
+                          if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
+                            cantMuestraNum = parseInt(reg.cant_muestra) || 0;
+                          }
+
+                          // Sumar los conteos de respuestas de desvío (resp_number) o usar la cantidad de causas registradas
+                          let totalDesviadas = 0;
+                          if (reg.respuestas && Array.isArray(reg.respuestas)) {
+                            reg.respuestas.forEach(ans => {
+                              if (ans.resp_number !== null && ans.resp_number !== undefined) {
+                                totalDesviadas += parseInt(ans.resp_number) || 0;
+                              }
+                            });
+                          }
+                          if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
+                            totalDesviadas = reg.causas.length;
+                          }
+
+                          // Asegurar que las desviadas no superen el total muestreado
+                          totalDesviadas = Math.min(totalDesviadas, cantMuestraNum);
+                          const sinDefecto = Math.max(0, cantMuestraNum - totalDesviadas);
+
+                          return (
+                            <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: '#000000', backgroundColor: '#F5F8FC' }}>
+                              {sinDefecto}
+                            </th>
                           );
-                          if (muestraAns && muestraAns.resp_number !== null) {
-                            cantMuestraNum = parseInt(muestraAns.resp_number) || 0;
+                        })}
+                      </tr>
+
+                      {/* Fila 3: Cantidad Desviada (Con Defecto) */}
+                      <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
+                        <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
+                          Cantidad Desviada (Con Defecto)
+                        </th>
+                        {registrosGroup.map(reg => {
+                          let cantMuestraNum = 0;
+                          if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
+                            cantMuestraNum = parseInt(reg.cant_muestra) || 0;
                           }
-                        }
 
-                        // Extraer números de muestra únicos que tuvieron desvío
-                        const muestrasConDesvioSet = new Set();
-                        reg.respuestas?.forEach(ans => {
-                          if (ans.resp_varchar) {
-                            const matches = ans.resp_varchar.matchAll(/Muestra (\d+):/g);
-                            for (const m of matches) {
-                              muestrasConDesvioSet.add(m[1]);
-                            }
+                          let totalDesviadas = 0;
+                          if (reg.respuestas && Array.isArray(reg.respuestas)) {
+                            reg.respuestas.forEach(ans => {
+                              if (ans.resp_number !== null && ans.resp_number !== undefined) {
+                                totalDesviadas += parseInt(ans.resp_number) || 0;
+                              }
+                            });
                           }
-                        });
-
-                        let totalDesviadas = muestrasConDesvioSet.size;
-                        if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
-                          totalDesviadas = Math.min(reg.causas.length, cantMuestraNum || 1);
-                        }
-
-                        const sinDefecto = Math.max(0, cantMuestraNum - totalDesviadas);
-
-                        return (
-                          <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: '#000000', backgroundColor: '#F5F8FC' }}>
-                            {sinDefecto}
-                          </th>
-                        );
-                      })}
-                    </tr>
-
-                    {/* Fila 3: Cantidad Desviada (Con Defecto) */}
-                    <tr style={{ borderBottom: '2px solid #cbd5e1' }}>
-                      <th style={{ textAlign: 'left', padding: '9px 14px', fontWeight: '700', fontSize: '13px', color: '#000000', backgroundColor: '#f1f5f9' }}>
-                        Cantidad Desviada (Con Defecto)
-                      </th>
-                      {registrosGroup.map(reg => {
-                        let cantMuestraNum = 0;
-                        if (reg.cant_muestra !== null && reg.cant_muestra !== undefined) {
-                          cantMuestraNum = parseInt(reg.cant_muestra) || 0;
-                        }
-
-                        const muestrasConDesvioSet = new Set();
-                        reg.respuestas?.forEach(ans => {
-                          if (ans.resp_varchar) {
-                            const matches = ans.resp_varchar.matchAll(/Muestra (\d+):/g);
-                            for (const m of matches) {
-                              muestrasConDesvioSet.add(m[1]);
-                            }
+                          if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
+                            totalDesviadas = reg.causas.length;
                           }
-                        });
 
-                        let totalDesviadas = muestrasConDesvioSet.size;
-                        if (totalDesviadas === 0 && reg.causas && reg.causas.length > 0) {
-                          totalDesviadas = Math.min(reg.causas.length, cantMuestraNum || 1);
-                        }
+                          totalDesviadas = Math.min(totalDesviadas, cantMuestraNum);
 
-                        return (
-                          <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: totalDesviadas > 0 ? '#dc2626' : '#000000', backgroundColor: '#F5F8FC' }}>
-                            {totalDesviadas}
-                          </th>
-                        );
-                      })}
-                    </tr>
+                          return (
+                            <th key={reg.id} style={{ textAlign: 'center', padding: '9px 8px', fontWeight: '700', fontSize: '16px', color: totalDesviadas > 0 ? '#dc2626' : '#000000', backgroundColor: '#F5F8FC' }}>
+                              {totalDesviadas}
+                            </th>
+                          );
+                        })}
+                      </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      const todasPregs = registrosGroup[0]?.respuestas || [];
+                      // Recolectar lista consolidada y única de preguntas a través de todos los muestreos del reporte
+                      const preguntasMap = new Map();
+                      registrosGroup.forEach(reg => {
+                        (reg.respuestas || []).forEach(ans => {
+                          if (ans.cod_pregunta && !preguntasMap.has(ans.cod_pregunta)) {
+                            preguntasMap.set(ans.cod_pregunta, ans);
+                          }
+                        });
+                      });
+                      const todasPregs = Array.from(preguntasMap.values());
                       // Separar campos de texto (tipo V) de los de muestreo
                       const camposTexto = todasPregs.filter(p => p.tipo_campo === 'V');
                       const pregs = todasPregs.filter(p => p.tipo_campo !== 'V');

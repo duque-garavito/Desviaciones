@@ -13,5 +13,6 @@ router.put('/editar/:id', inspectionController.update);
 router.get('/articulos', inspectionController.buscarArticulos);
 router.get('/causas-desviacion', inspectionController.getDeviationCauses);
 router.get('/desviaciones-articulo', inspectionController.getDeviationsByArticle);
+router.get('/partes-produccion', inspectionController.getPartesProduccion);
 
 module.exports = router;

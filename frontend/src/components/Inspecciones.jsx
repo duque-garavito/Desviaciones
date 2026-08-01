@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
 import { Search, Loader2, CheckCircle2, AlertCircle, AlertTriangle, Package, ChevronRight, Check, Save } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import fishLogo from '../assets/images/fishlogo.png';
+import logoApk from '../assets/images/logo apk desviaciones.png';
 import './Inspecciones.css';
 
 
@@ -56,9 +58,7 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
       {/* Encabezado elegante */}
       <div className="ins-articulo-header">
         <div className="ins-header-info">
-          <div className="ins-header-icon-badge">
-            <Package size={22} />
-          </div>
+          <img src={logoApk} alt="Logo Desviaciones" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
           <div>
             <h2 className="ins-header-title">Selección de Artículo</h2>
           </div>
@@ -331,7 +331,11 @@ function PantallaFormulario({
         try {
           const muestrasConDesvio = muestrasGuardadas.filter(m => !m.sinDefecto);
           const respuestasMuestreo = preguntasMuestreo.map(p => {
-            const desviosDeEstaPregunta = muestrasConDesvio.filter(m => m.desviacionCod === p.id || m.desviacionLabel === p.texto);
+            const desviosDeEstaPregunta = muestrasConDesvio.filter(m => 
+              (m.desviacionCod && String(m.desviacionCod).trim() === String(p.id).trim()) ||
+              (m.desviacionLabel && p.texto && String(m.desviacionLabel).trim().toLowerCase() === String(p.texto).trim().toLowerCase()) ||
+              (m.desviacionLabel && p.descr && String(m.desviacionLabel).trim().toLowerCase() === String(p.descr).trim().toLowerCase())
+            );
             const countDesvios = desviosDeEstaPregunta.length;
             if (p.tipo_campo === 'N' || countDesvios > 0) {
               return {
@@ -520,7 +524,11 @@ function PantallaFormulario({
 
       // Luego las respuestas del muestreo (tipo N/B)
       const respuestasMuestreo = preguntasMuestreo.map(p => {
-        const desviosDeEstaPregunta = muestrasConDesvio.filter(m => m.desviacionCod === p.id || m.desviacionLabel === p.texto);
+        const desviosDeEstaPregunta = muestrasConDesvio.filter(m => 
+          (m.desviacionCod && String(m.desviacionCod).trim() === String(p.id).trim()) ||
+          (m.desviacionLabel && p.texto && String(m.desviacionLabel).trim().toLowerCase() === String(p.texto).trim().toLowerCase()) ||
+          (m.desviacionLabel && p.descr && String(m.desviacionLabel).trim().toLowerCase() === String(p.descr).trim().toLowerCase())
+        );
         const countDesvios = desviosDeEstaPregunta.length;
 
         if (p.tipo_campo === 'N' || countDesvios > 0) {
@@ -547,21 +555,39 @@ function PantallaFormulario({
 
       const respuestasArray = [...respuestasTexto, ...respuestasMuestreo];
 
-      const res = await fetch(`${API_BASE_URL}/api/inspecciones/guardar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cod_rv: formularioInfo?.cod_rv,
-          nro_ref: articulo?.COD_ART,
-          cod_usr: usuario?.id,
-          conteo_muestra: conteoMuestra || String(muestrasGuardadas.length),
-          total_desvios: totalDesvios,
-          total_sin_defecto: totalSinDefecto,
-          respuestas: respuestasArray,
-          hora_inicio: new Date().toISOString(),
-          hora_fin: horaFin
-        })
-      });
+      let res;
+      if (codRepC) {
+        // Si ya existe cabecera activa creada al inicio, sincronizar y finalizar el borrador en Oracle
+        res = await fetch(`${API_BASE_URL}/api/inspecciones/sincronizar-progreso`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cod_rep_c: codRepC,
+            cod_rv: formularioInfo?.cod_rv,
+            cod_usr: usuario?.id,
+            nro_ref: articulo?.COD_ART,
+            respuestas: respuestasMuestreo,
+            conteo_muestra: conteoMuestra || String(muestrasGuardadas.length)
+          })
+        });
+      } else {
+        // Si no existía cabecera previa, llamar a guardar creando la cabecera
+        res = await fetch(`${API_BASE_URL}/api/inspecciones/guardar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cod_rv: formularioInfo?.cod_rv,
+            nro_ref: articulo?.COD_ART,
+            cod_usr: usuario?.id,
+            conteo_muestra: conteoMuestra || String(muestrasGuardadas.length),
+            total_desvios: totalDesvios,
+            total_sin_defecto: totalSinDefecto,
+            respuestas: respuestasArray,
+            hora_inicio: new Date().toISOString(),
+            hora_fin: horaFin
+          })
+        });
+      }
       const data = await res.json();
       if (data.success) {
         if (usuario?.id) {
@@ -625,6 +651,7 @@ function PantallaFormulario({
       )}
 
       <div className="ins-form-header">
+        <img src={logoApk} alt="Desviaciones" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
         <button className="ins-btn-finalizar" onClick={handleFinalizarReporte} disabled={enviando}>
           {enviando ? <Loader2 size={14} className="spinner" /> : null}
           <Save size={20} />Finalizar Muestreo
@@ -906,10 +933,28 @@ function Inspecciones({ usuario, onLogout }) {
   const [preguntas, setPreguntas] = useState([]);
   const [camposTextoValues, setCamposTextoValues] = useState(null); // valores Procedencia/Camara/Proveedor
   const [codRepC, setCodRepC] = useState(null); // Código de cabecera creado en Oracle BD
+  const [parteProduccionInput, setParteProduccionInput] = useState(''); // Parte de Producción seleccionado
+  const [partesProduccionLista, setPartesProduccionLista] = useState([]); // Lista de partes de la semana desde Oracle
   const [draftRestaurado, setDraftRestaurado] = useState(null);
   const [alertaRestauracion, setAlertaRestauracion] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+
+  // Cargar partes de producción recientes de Oracle al cargar el componente
+  useEffect(() => {
+    const cargarPartes = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/inspecciones/partes-produccion`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.partes)) {
+          setPartesProduccionLista(data.partes);
+        }
+      } catch (e) {
+        console.error("Error cargando partes de producción de Oracle:", e);
+      }
+    };
+    cargarPartes();
+  }, []);
 
   // Restaurar borrador pendiente (consulta BD de Oracle e integra memoria local si existe)
   useEffect(() => {
@@ -942,13 +987,13 @@ function Inspecciones({ usuario, onLogout }) {
       try {
         const res = await fetch(`${API_BASE_URL}/api/inspecciones/borrador-activo/${usuario.id}`);
         const data = await res.json();
-        if (data.success && data.draft) {
+        if (data.success && data.draft && data.draft.articulo && data.draft.articulo.COD_ART) {
           const draftBD = data.draft;
           setCodRepC(draftBD.cod_rep_c);
           setArticuloSeleccionado(draftBD.articulo);
           
           const muestrasReconstruidas = [];
-          const respuestasMuestreo = draftBD.respuestas.filter(r => r.resp_number !== null || r.resp_char !== null);
+          const respuestasMuestreo = (draftBD.respuestas || []).filter(r => r.resp_number !== null || r.resp_char !== null);
           const respuestasDesvio = respuestasMuestreo.filter(r => r.resp_number > 0);
 
           let nroMuestra = 1;
@@ -993,7 +1038,7 @@ function Inspecciones({ usuario, onLogout }) {
     }
   }, [alertaRestauracion]);
 
-  // Cargar formulario del inspector al montar
+  // Cargar formulario del inspector y parte de producción automático del día al montar
   useEffect(() => {
     const cargar = async () => {
       if (!usuario?.id) return;
@@ -1014,8 +1059,16 @@ function Inspecciones({ usuario, onLogout }) {
         } else {
           console.warn('Sin programación activa:', data.message);
         }
+
+        // Cargar partes de producción activos con la consulta SQL del usuario y seleccionar automáticamente el primero
+        const resPartes = await fetch(`${API_BASE_URL}/api/inspecciones/partes-produccion`);
+        const dataPartes = await resPartes.json();
+        if (dataPartes.success && Array.isArray(dataPartes.partes) && dataPartes.partes.length > 0) {
+          setPartesProduccionLista(dataPartes.partes);
+          setParteProduccionInput(dataPartes.partes[0].cod_parte_producc);
+        }
       } catch (err) {
-        console.error('Error cargando formulario:', err);
+        console.error('Error cargando formulario o parte de producción:', err);
         const urlDestino = `${API_BASE_URL}/api/inspecciones/formulario-hoy/${usuario?.id}`;
         const redStatus = navigator.onLine ? "Red activa" : "Sin conexión Wi-Fi";
         const detalleError = [
@@ -1034,7 +1087,7 @@ function Inspecciones({ usuario, onLogout }) {
 
   const handleIniciarReporte = () => setPantalla('seleccion');
 
-  const handleSeleccionarArticulo = (art) => {
+  const handleSeleccionarArticulo = async (art) => {
     setConfirmarArticulo(art);
   };
 
@@ -1078,24 +1131,27 @@ function Inspecciones({ usuario, onLogout }) {
     if (esRecepcion && preguntasV.length > 0) {
       setPantalla('campos');
     } else {
-      // Crear cabecera directamente en la BD Oracle
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cod_rv: (currentFormInfo || formularioInfo)?.cod_rv,
-            nro_ref: art.COD_ART,
-            cod_usr: usuario?.id,
-            camposTexto: []
-          })
-        });
-        const data = await res.json();
-        if (data.success && data.cod_rep_c) {
-          setCodRepC(data.cod_rep_c);
+      // Crear cabecera directamente en la BD Oracle sólo si no existe una activa para esta sesión
+      if (!codRepC) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cod_rv: (currentFormInfo || formularioInfo)?.cod_rv,
+              nro_ref: art.COD_ART,
+              cod_usr: usuario?.id,
+              parte_produccion: parteProduccionInput ? parteProduccionInput.trim() : null,
+              camposTexto: []
+            })
+          });
+          const data = await res.json();
+          if (data.success && data.cod_rep_c) {
+            setCodRepC(data.cod_rep_c);
+          }
+        } catch (e) {
+          console.error("Error creando cabecera en Oracle:", e);
         }
-      } catch (e) {
-        console.error("Error creando cabecera en Oracle:", e);
       }
       setPantalla('formulario');
     }
@@ -1103,52 +1159,40 @@ function Inspecciones({ usuario, onLogout }) {
 
   const handleCrearCabeceraConCampos = async (vals) => {
     setCamposTextoValues(vals);
-    try {
-      const preguntasV = preguntas.filter(p => p.tipo_campo === 'V');
-      const camposPayload = preguntasV.map(p => ({
-        cod_pregunta: p.id,
-        resp_varchar: vals[p.id] ? vals[p.id].trim() : null
-      }));
+    if (!codRepC) {
+      try {
+        const preguntasV = preguntas.filter(p => p.tipo_campo === 'V');
+        const camposPayload = preguntasV.map(p => ({
+          cod_pregunta: p.id,
+          resp_varchar: vals[p.id] ? vals[p.id].trim() : null
+        }));
 
-      const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cod_rv: formularioInfo?.cod_rv,
-          nro_ref: articuloSeleccionado?.COD_ART,
-          cod_usr: usuario?.id,
-          camposTexto: camposPayload
-        })
-      });
-      const data = await res.json();
-      if (data.success && data.cod_rep_c) {
-        setCodRepC(data.cod_rep_c);
+        const res = await fetch(`${API_BASE_URL}/api/inspecciones/crear-cabecera`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cod_rv: formularioInfo?.cod_rv,
+            nro_ref: articuloSeleccionado?.COD_ART,
+            cod_usr: usuario?.id,
+            parte_produccion: parteProduccionInput ? parteProduccionInput.trim() : null,
+            camposTexto: camposPayload
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.cod_rep_c) {
+          setCodRepC(data.cod_rep_c);
+        }
+      } catch (e) {
+        console.error("Error creando cabecera con campos en Oracle:", e);
       }
-    } catch (e) {
-      console.error("Error creando cabecera con campos en Oracle:", e);
     }
     setPantalla('formulario');
   };
 
-  const handleCambiarArticulo = async () => {
-    if (codRepC) {
-      try {
-        await fetch(`${API_BASE_URL}/api/inspecciones/cancelar-borrador`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cod_rep_c: codRepC })
-        });
-      } catch (e) {
-        console.error("Error cancelando borrador:", e);
-      }
-    }
-    if (usuario?.id) {
-      localStorage.removeItem(`draft_inspeccion_${usuario.id}`);
-    }
+  const handleCambiarArticulo = () => {
     setArticuloSeleccionado(null);
     setCodRepC(null);
-    setDraftRestaurado(null);
-    setCamposTextoValues(null);
+    setParteProduccionInput('');
     setPantalla('seleccion');
   };
 
@@ -1197,16 +1241,38 @@ function Inspecciones({ usuario, onLogout }) {
               <div className="ins-modal-overlay">
                 <div className="ins-modal-card">
                   <h3>Iniciar Inspección</h3>
-                  <p>
+                  <p style={{ marginBottom: '12px' }}>
                     ¿Desea iniciar la inspección para el artículo:{' '}
                     <strong>
                       {confirmarArticulo.COD_ART} {confirmarArticulo.NOM_ARTICULO ? `- ${confirmarArticulo.NOM_ARTICULO}` : ''}
                     </strong>?
                   </p>
+
+                  {/* Parte de Producción automático asignado desde Oracle */}
+                  <div style={{ textAlign: 'left', marginBottom: '16px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Parte de Producción del Día:
+                    </label>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#1e3a8a' }}>
+                      {(() => {
+                        const parteObj = partesProduccionLista.find(p => p.cod_parte_producc === parteProduccionInput) || partesProduccionLista[0];
+                        if (parteObj) {
+                          const descStr = parteObj.descripcion ? ` - ${parteObj.descripcion}` : '';
+                          const espStr = parteObj.especie ? ` (${parteObj.especie})` : '';
+                          return `${parteObj.cod_parte_producc} — ${parteObj.fecha_parte}${descStr}${espStr}`;
+                        }
+                        return parteProduccionInput || 'Asignado automáticamente';
+                      })()}
+                    </div>
+                  </div>  
+
                   <div className="ins-modal-acciones">
                     <button
                       className="ins-modal-no"
-                      onClick={() => setConfirmarArticulo(null)}
+                      onClick={() => {
+                        setConfirmarArticulo(null);
+                        setParteProduccionInput('');
+                      }}
                     >
                       Cancelar
                     </button>
