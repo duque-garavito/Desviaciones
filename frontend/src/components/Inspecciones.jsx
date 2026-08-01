@@ -17,9 +17,9 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
   const [cargando, setCargando] = useState(false);
 
   // Cargar catálogo inicial solo al montar o cambiar de área
-  useEffect(() => {
+/*   useEffect(() => {
     buscarArticulos('');
-  }, [codArea]);
+  }, []); */
 
   const buscarArticulos = async (termino) => {
     setCargando(true);
@@ -40,7 +40,7 @@ function PantallaSeleccionArticulo({ onSeleccionar, codArea }) {
   // Debounce solo cuando hay 2 o más caracteres. Al borrar todo (< 2), NO busca nada.
   useEffect(() => {
     const txt = busqueda.trim();
-    if (txt.length < 2) return;
+   // if (txt.length < 2) return;
 
     const timer = setTimeout(() => {
       buscarArticulos(txt);
@@ -933,15 +933,15 @@ function Inspecciones({ usuario, onLogout }) {
   const [preguntas, setPreguntas] = useState([]);
   const [camposTextoValues, setCamposTextoValues] = useState(null); // valores Procedencia/Camara/Proveedor
   const [codRepC, setCodRepC] = useState(null); // Código de cabecera creado en Oracle BD
-  const [parteProduccionInput, setParteProduccionInput] = useState(''); // Parte de Producción seleccionado
-  const [partesProduccionLista, setPartesProduccionLista] = useState([]); // Lista de partes de la semana desde Oracle
+  //const [parteProduccionInput, setParteProduccionInput] = useState(''); // Parte de Producción seleccionado
+  //const [partesProduccionLista, setPartesProduccionLista] = useState([]); // Lista de partes de la semana desde Oracle
   const [draftRestaurado, setDraftRestaurado] = useState(null);
   const [alertaRestauracion, setAlertaRestauracion] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
   // Cargar partes de producción recientes de Oracle al cargar el componente
-  useEffect(() => {
+ /*  useEffect(() => {
     const cargarPartes = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/inspecciones/partes-produccion`);
@@ -954,7 +954,7 @@ function Inspecciones({ usuario, onLogout }) {
       }
     };
     cargarPartes();
-  }, []);
+  }, []); */
 
   // Restaurar borrador pendiente (consulta BD de Oracle e integra memoria local si existe)
   useEffect(() => {
@@ -1061,12 +1061,12 @@ function Inspecciones({ usuario, onLogout }) {
         }
 
         // Cargar partes de producción activos con la consulta SQL del usuario y seleccionar automáticamente el primero
-        const resPartes = await fetch(`${API_BASE_URL}/api/inspecciones/partes-produccion`);
+       /*  const resPartes = await fetch(`${API_BASE_URL}/api/inspecciones/partes-produccion`);
         const dataPartes = await resPartes.json();
         if (dataPartes.success && Array.isArray(dataPartes.partes) && dataPartes.partes.length > 0) {
           setPartesProduccionLista(dataPartes.partes);
           setParteProduccionInput(dataPartes.partes[0].cod_parte_producc);
-        }
+        } */
       } catch (err) {
         console.error('Error cargando formulario o parte de producción:', err);
         const urlDestino = `${API_BASE_URL}/api/inspecciones/formulario-hoy/${usuario?.id}`;
@@ -1083,7 +1083,7 @@ function Inspecciones({ usuario, onLogout }) {
       }
     };
     cargar();
-  }, [usuario]);
+  }, []);
 
   const handleIniciarReporte = () => setPantalla('seleccion');
 
@@ -1192,7 +1192,7 @@ function Inspecciones({ usuario, onLogout }) {
   const handleCambiarArticulo = () => {
     setArticuloSeleccionado(null);
     setCodRepC(null);
-    setParteProduccionInput('');
+    //setParteProduccionInput('');
     setPantalla('seleccion');
   };
 
@@ -1271,7 +1271,7 @@ function Inspecciones({ usuario, onLogout }) {
                       className="ins-modal-no"
                       onClick={() => {
                         setConfirmarArticulo(null);
-                        setParteProduccionInput('');
+                       // setParteProduccionInput('');
                       }}
                     >
                       Cancelar
