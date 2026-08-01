@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Login.css';
+import '../assets/css/Login.css';
 import { API_BASE_URL } from '../config';
 import logo from '../assets/images/fishlogo.png';
 

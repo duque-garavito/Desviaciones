@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from './Layout';
+import Layout from '../components/Layout';
 import { Calendar, Sun, Moon } from 'lucide-react';
 import { API_BASE_URL } from '../config';
-import './Dashboard.css';
+import '../assets/css/Dashboard.css';
 
 function Dashboard({ usuario, onLogout }) {
   const navigate = useNavigate();

@@ -16,7 +16,7 @@ import {
   Inbox
 } from 'lucide-react';
 import ModalDetalle from './ModalDetalle';
-import './Registros.css';
+import '../assets/css/Registros.css';
 
 function Registros({ usuario, onLogout }) {
   const navigate = useNavigate();

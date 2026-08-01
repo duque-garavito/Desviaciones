@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from './Layout';
+import Layout from '../Layout';
 import { Search, Loader2, CheckCircle2, AlertCircle, AlertTriangle, Package, ChevronRight, Check, Save } from 'lucide-react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 import fishLogo from '../assets/images/fishlogo.png';
 import logoApk from '../assets/images/logo apk desviaciones.png';
-import './Inspecciones.css';
+import '../assets/css/Inspecciones.css';
 
 
 /* ════════════════════════════════════════════════

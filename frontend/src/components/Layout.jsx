@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import logo from '../assets/images/fishlogo.png';
 import { API_BASE_URL } from '../config';
-import './Layout.css';
+import '../assets/css/Layout.css';
 
 // ── Lista del menú lateral (solo opciones de inspector) ──
 const menuItems = [
