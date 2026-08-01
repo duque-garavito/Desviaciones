@@ -34,16 +34,19 @@ class InspectionModel {
 
     // 2. Obtener formulario activo para esa área de supervisión y especie
     let formQuery = `
-      SELECT DISTINCT rv.COD_RV, rv.COD_VERSION, mr.DESCR as nombre, mr.COD_REPORTE
+      SELECT  rv.COD_RV, rv.COD_VERSION, mr.DESCR as nombre, mr.COD_REPORTE
       FROM REPORTES_VERSIONADO rv
       JOIN MAESTRO_REPORTES mr ON rv.COD_REPORTE = mr.COD_REPORTE
       JOIN PLANTILLA_CAUSA_DESVIACION pcd ON mr.COD_REPORTE = pcd.COD_REPORTE
+      join ARTICULO_SUB_CATEG ASUB ON PCD.COD_SUB_CAT=ASUB.COD_SUB_CAT
+      JOIN TG_ESPECIES T ON ASUB.CAT_ART=T.CAT_ART
       WHERE pcd.COD_AS = :COD_AS AND rv.FLAG_ESTADO IN ('1', 'A')
+    
     `;
     const replacements = { COD_AS: cod_as };
 
     if (especie) {
-      formQuery += ` AND (pcd.COD_ESPECI IS NULL OR TRIM(pcd.COD_ESPECI) = TRIM(:ESPECIE)) `;
+      formQuery += `  AND TRIM(T.ESPECIE) = TRIM(:ESPECIE)`;
       replacements.ESPECIE = especie;
     }
 

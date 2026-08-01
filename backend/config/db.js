@@ -28,6 +28,11 @@ async function initPool() {
     return pool;
   } catch (error) {
     console.error('❌ Error al iniciar Pool de Oracle DB:', error.message);
+    console.error('DB_HOST:', process.env.DB_HOST);
+    console.error('DB_PORT:', process.env.DB_PORT);
+    console.error('DB_USER:', process.env.DB_USER);
+    console.error('DB_PASSWORD:', process.env.DB_PASSWORD);
+    console.error('DB_NAME:', process.env.DB_NAME);
     throw error;
   }
 }
