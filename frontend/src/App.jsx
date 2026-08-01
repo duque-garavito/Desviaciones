@@ -1,95 +1,77 @@
-import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import Inspecciones from './components/Inspecciones';
-import Registros from './components/Registros';
+import React from "react";
+import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+import Login from "./views/LoginScreen";
+import Dashboard from "./views/DashboardView";
+import InspeccionScreen from "./views/InspeccionScreen";
+import Registros from "./views/Registros";
+import Layout from "./components/Layout"; // <-- Nuevo
+import { DesviacionProvider } from './core/Context/DesviacionContext';
+
+import { useAuth } from "./core/Context/AuthContext";
+
+function RutaProtegida() {
+    const { autenticado, loading } = useAuth();
+
+    if (loading) return null;
+
+    return autenticado ? (
+        <Layout />
+    ) : (
+        <Navigate to="/login" replace />
+    );
+}
 
 function App() {
-  // Al iniciar, React revisa si hay un usuario guardado en localStorage
-  const [usuarioActual, setUsuarioActual] = useState(() => {
-    try {
-      const guardado = localStorage.getItem('usuario');
-      if (guardado && guardado !== "undefined") {
-        const parsed = JSON.parse(guardado);
-        // Retrocompatibilidad para sesiones antiguas que solo tienen 'rol'
-        if (parsed && !parsed.perfil && parsed.rol) {
-          parsed.perfil = parsed.rol === 'ADMINISTRADOR' ? 'JF_CALID' : 'SUP_CALI';
-        }
-        return parsed;
-      }
-      return null;
-    } catch (e) {
-      console.error("Error al leer sesión:", e);
-      localStorage.removeItem('usuario');
-      return null;
-    }
-  });
+    const { autenticado, loading } = useAuth();
 
-  // Componente para proteger rutas por login
-  const RutaProtegida = ({ children }) => {
-    if (!usuarioActual) {
-      return <Navigate to="/login" replace />;
-    }
-    return children;
-  };
+    if (loading) return null;
 
-  return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            usuarioActual ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+    return (
+        <Router>
+            <Routes>
 
-        <Route
-          path="/login"
-          element={
-            usuarioActual ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Login onLoginExitoso={setUsuarioActual} />
-            )
-          }
-        />
+                <Route
+                    path="/"
+                    element={
+                        autenticado
+                            ? <Navigate to="/dashboard" replace />
+                            : <Navigate to="/login" replace />
+                    }
+                />
 
-        <Route path="/dashboard" element={
-          <RutaProtegida>
-            <Dashboard usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
-          </RutaProtegida>
-        } />
+                <Route
+                    path="/login"
+                    element={
+                        autenticado
+                            ? <Navigate to="/dashboard" replace />
+                            : <Login />
+                    }
+                />
 
-        <Route path="/inspecciones" element={
-          <RutaProtegida>
-            <Inspecciones usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
-          </RutaProtegida>
-        } />
+             
+                <Route element={<RutaProtegida />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/inspecciones" element={
+                        <DesviacionProvider>
+                        <InspeccionScreen />
+                        </DesviacionProvider>
+                        } />
+                    <Route path="/registros" element={<Registros />} />
+                </Route>
 
-        <Route path="/registros" element={
-          <RutaProtegida>
-            <Registros usuario={usuarioActual} onLogout={() => setUsuarioActual(null)} />
-          </RutaProtegida>
-        } />
+                <Route
+                    path="*"
+                    element={
+                        autenticado
+                            ? <Navigate to="/dashboard" replace />
+                            : <Navigate to="/login" replace />
+                    }
+                />
 
-        <Route
-          path="*"
-          element={
-            usuarioActual ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
-    </Router>
-  );
+            </Routes>
+        </Router>
+    );
 }
 
 export default App;

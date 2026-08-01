@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from './Layout';
+import Layout from '../components/Layout';
 import { API_BASE_URL } from '../config';
 import {
   FileText,
@@ -15,7 +15,7 @@ import {
   MapPin,
   Inbox
 } from 'lucide-react';
-import ModalDetalle from './ModalDetalle';
+import ModalDetalle from '../components/ModalDetalle';
 import '../assets/css/Registros.css';
 
 function Registros({ usuario, onLogout }) {

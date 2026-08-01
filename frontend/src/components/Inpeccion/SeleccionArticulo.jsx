@@ -1,26 +1,41 @@
-import React from 'react'
+import React, { useState, useEffect } from "react";
+import logoApk from "../../assets/images/logo apk desviaciones.png";
+import { Search, Loader2, Package, ChevronRight } from "lucide-react";
+import "../../assets/css/Inspecciones.css";
+import { useAuth } from "../../core/Context/AuthContext";
+import { useDesviacion } from "../../core/Context/DesviacionContext";
+import { obtenerArticulos } from "../../core/services/Articulo.service";
+import MdlConfirmarInicio from "./MdlConfirmarInicio";
 
-export default function SeleccionarArticuloScreen({ onSeleccionar, codArea }) {
-  const [busqueda, setBusqueda] = useState('');
+export default function SeleccionArticulo() {
+  const [busqueda, setBusqueda] = useState("");
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
-
-  // Cargar catálogo inicial solo al montar o cambiar de área
-/*   useEffect(() => {
-    buscarArticulos('');
-  }, []); */
+  const { usuarioActual } = useAuth();
+  const { seleccionarArticulo, articuloSeleccionado, reporteGenerado } =
+    useDesviacion();
 
   const buscarArticulos = async (termino) => {
     setCargando(true);
     try {
       const params = new URLSearchParams();
-      if (termino && termino.trim().length >= 2) params.set('buscar', termino.trim());
-      if (codArea) params.set('cod_as', String(codArea).trim());
-      const res = await fetch(`${API_BASE_URL}/api/inspecciones/articulos?${params.toString()}`);
-      const data = await res.json();
-      setLista(data.success ? (data.articulos || []) : []);
-    } catch {
+      if (termino && termino.trim().length >= 2)
+        params.set("buscar", termino.trim());
+      if (usuarioActual)
+        params.set("cod_as", String(usuarioActual.codArea).trim());
+
+      const peticion = await obtenerArticulos(params);
+
+      if ("error" in peticion) {
+        setLista([]);
+        console.log(peticion.message);
+        return;
+      }
+      setLista(peticion.articulos);
+      // console.log(data.success ? (data.articulos || []) : [])
+    } catch (error) {
       setLista([]);
+      console.log(error);
     } finally {
       setCargando(false);
     }
@@ -29,7 +44,7 @@ export default function SeleccionarArticuloScreen({ onSeleccionar, codArea }) {
   // Debounce solo cuando hay 2 o más caracteres. Al borrar todo (< 2), NO busca nada.
   useEffect(() => {
     const txt = busqueda.trim();
-   // if (txt.length < 2) return;
+    // if (txt.length < 2) return;
 
     const timer = setTimeout(() => {
       buscarArticulos(txt);
@@ -44,10 +59,15 @@ export default function SeleccionarArticuloScreen({ onSeleccionar, codArea }) {
 
   return (
     <div className="ins-pantalla-articulo">
+      {articuloSeleccionado && !reporteGenerado && <MdlConfirmarInicio />}
       {/* Encabezado elegante */}
       <div className="ins-articulo-header">
         <div className="ins-header-info">
-          <img src={logoApk} alt="Logo Desviaciones" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
+          <img
+            src={logoApk}
+            alt="Logo Desviaciones"
+            style={{ height: "48px", width: "auto", objectFit: "contain" }}
+          />
           <div>
             <h2 className="ins-header-title">Selección de Artículo</h2>
           </div>
@@ -62,19 +82,18 @@ export default function SeleccionarArticuloScreen({ onSeleccionar, codArea }) {
           className="ins-buscar-input"
           placeholder="Buscar por código, nombre o descripción del artículo..."
           value={busqueda}
-          onChange={e => handleBusquedaChange(e.target.value)}
+          onChange={(e) => handleBusquedaChange(e.target.value)}
         />
         {busqueda && (
           <button
             type="button"
             className="ins-clear-btn"
-            onClick={() => handleBusquedaChange('')}
+            onClick={() => handleBusquedaChange("")}
             title="Limpiar búsqueda"
           >
             &times;
           </button>
         )}
-
       </div>
 
       {/* Contador de resultados */}
@@ -94,19 +113,28 @@ export default function SeleccionarArticuloScreen({ onSeleccionar, codArea }) {
         ) : lista.length === 0 ? (
           <div className="ins-lista-vacia">
             <Package size={36} className="ins-vacia-icon" />
-            <p>{busqueda ? 'No se encontraron artículos con ese término' : 'No hay artículos registrados'}</p>
+            <p>
+              {busqueda
+                ? "No se encontraron artículos con ese término"
+                : "No hay artículos registrados"}
+            </p>
           </div>
         ) : (
           lista.map((art, idx) => {
-            const codArt = art.cod_art || art.COD_ART || '';
-            const nomArt = art.nom_articulo || art.NOM_ARTICULO || art.desc_art || art.DESC_ART || '';
-            const descSubCat = art.desc_sub_cat || art.DESC_SUB_CAT || '';
-            const descEtiqueta = art.desc_etiqueta || art.DESC_ETIQUETA || '';
+            const codArt = art.cod_art || art.COD_ART || "";
+            const nomArt =
+              art.nom_articulo ||
+              art.NOM_ARTICULO ||
+              art.desc_art ||
+              art.DESC_ART ||
+              "";
+            const descSubCat = art.desc_sub_cat || art.DESC_SUB_CAT || "";
+            const descEtiqueta = art.desc_etiqueta || art.DESC_ETIQUETA || "";
             return (
               <div
                 key={codArt || idx}
                 className="ins-articulo-item"
-                onClick={() => onSeleccionar(art)}
+                onClick={() => seleccionarArticulo(art)}
               >
                 <div className="ins-art-content">
                   <div className="ins-art-row-top">

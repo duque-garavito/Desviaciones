@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Outlet } from "react-router-dom";
 import {
   Calendar,
   Search,
@@ -11,6 +12,7 @@ import {
 import logo from '../assets/images/fishlogo.png';
 import { API_BASE_URL } from '../config';
 import '../assets/css/Layout.css';
+import { useAuth } from '../core/Context/AuthContext';
 
 // ── Lista del menú lateral (solo opciones de inspector) ──
 const menuItems = [
@@ -20,9 +22,11 @@ const menuItems = [
 ];
 
 // COMPONENTE LAYOUT (Navbar + Sidebar juntos + Guardia de Navegación)
-function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLogout, children }) {
+function Layout({  inspeccionEnProgreso = false, onConfirmarSalida }) {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const {logout,usuarioActual} =useAuth()
 
   // ── Estado compartido
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,13 +35,13 @@ function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLo
   const [modalSalidaAbierto, setModalSalidaAbierto] = useState(false);
   const [destinoPendiente, setDestinoPendiente] = useState(null);
 
-  const [areaActual, setAreaActual] = useState(usuario?.areaAsignada || 'Sin asignar');
-  const [turnoActual, setTurnoActual] = useState(usuario?.turno || 'Día');
+  // const [areaActual, setAreaActual] = useState(usuario?.areaAsignada || 'Sin asignar');
+  // const [turnoActual, setTurnoActual] = useState(usuario?.turno || 'Día');
 
   // ── Buscar programación real al cargar 
-  useEffect(() => {
-    if (usuario?.perfil === 'SUP_CALI' && usuario?.id) {
-      fetch(`${API_BASE_URL}/api/programacion/usuario/${usuario.id}`)
+/*   useEffect(() => {
+    if (usuarioActual?.perfil === 'SUP_CALI' && usuarioActual?.id) {
+      fetch(`${API_BASE_URL}/api/programacion/usuario/${usuarioActual.id}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -56,7 +60,7 @@ function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLo
         })
         .catch(err => console.error('Error actualizando navbar:', err));
     }
-  }, [usuario, location.pathname]);
+  }, [usuarioActual, location.pathname]); */
 
   // ── Interceptar botón Atrás nativo de Android (Lenovo Tablet) via Capacitor
   useEffect(() => {
@@ -123,12 +127,10 @@ function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLo
   const ejecutarNavegacion = (destino) => {
     if (destino === 'logout') {
       localStorage.removeItem('usuario');
-      if (usuario?.id) {
-        localStorage.removeItem(`draft_inspeccion_${usuario.id}`);
+      if (usuarioActual?.id) {
+        localStorage.removeItem(`draft_inspeccion_${usuarioActual.id}`);
       }
-      if (onLogout) {
-        onLogout();
-      }
+      logout()
       navigate('/login', { replace: true });
     } else if (destino === 'atras') {
       if (onConfirmarSalida) onConfirmarSalida();
@@ -173,11 +175,11 @@ function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLo
         <nav className="sidebar-menu">
           <img src={logo} alt="Logo Fisholg" className="sidebar-menu-logo" />
           <div className="user-info">
-            <span className="user-name">Hola, {usuario?.nombre || 'Usuario'}</span>
+            <span className="user-name">Hola, {usuarioActual?.nombre || 'Usuario'}</span>
             <span className="user-role">
-              {usuario?.perfil === 'JF_CALID'
+              {usuarioActual?.perfil === 'JF_CALID'
                 ? 'Jefe de Calidad'
-                : (usuario?.perfil === 'SUP_CALI' ? 'Supervisor de Calidad' : usuario?.perfil || 'Invitado')}
+                : (usuarioActual?.perfil === 'SUP_CALI' ? 'Supervisor de Calidad' : usuarioActual?.perfil || 'Invitado')}
             </span>
           </div>
 
@@ -207,7 +209,7 @@ function Layout({ usuario, inspeccionEnProgreso = false, onConfirmarSalida, onLo
 
       {/* ─── CONTENIDO DE LA PÁGINA ─── */}
       <main className="layout-main">
-        {children}
+        <Outlet/>
       </main>
 
       {/* ─── MODAL DE CONFIRMACIÓN DE SALIDA DE INSPECCIÓN ─── */}

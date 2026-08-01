@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const db = require("../config/db");
 
 function decryptPassword(encrypted) {
   if (!encrypted) return "";
@@ -37,9 +37,11 @@ class UserModel {
       WHERE LOWER(TRIM(COD_USR)) = LOWER(:codUsr)
     `;
 
-    const results = await db.execute(query, { codUsr: String(codUsr || '').trim() });
+    const results = await db.execute(query, {
+      codUsr: String(codUsr || "").trim(),
+    });
     if (results.length === 0) return null;
-    
+
     const user = results[0];
 
     // Desencriptar la contraseña de la BD y comparar
@@ -56,32 +58,36 @@ class UserModel {
   static async getTodaySchedule(userId) {
     const d = new Date();
     const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
-    const results = await db.execute(`
-      SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE
+    const results = await db.execute(
+      `
+      SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE,a.cod_as
       FROM PROGRAMACION_CALIDAD_DET pd
       LEFT JOIN AREAS_SUPERVISION a ON pd.COD_AS = a.COD_AS
       WHERE LOWER(TRIM(pd.COD_USR)) = LOWER(:userId) AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
-    `, { userId: String(userId || '').trim(), todayStr });
-    
+    `,
+      { userId: String(userId || "").trim(), todayStr },
+    );
+
     return results[0];
   }
 
   // Obtener lista de inspectores
   static async getAllInspectors() {
     const results = await db.execute(
-      `SELECT COD_USR, COD_USR as id, NOMBRE, NOMBRE as nombre 
+      `SELECT COD_USR , NOMBRE, NOMBRE as nombre 
        FROM USUARIO 
-       WHERE TRIM(PERFIL) = 'SUP_CALI'`
+       WHERE TRIM(PERFIL) = 'SUP_CALI'`,
     );
-    
-    return results.map(r => {
+
+    return results.map((r) => {
       const newObj = {};
       for (const key of Object.keys(r)) {
-        newObj[key.toLowerCase()] = typeof r[key] === 'string' ? r[key].trim() : r[key];
+        newObj[key.toLowerCase()] =
+          typeof r[key] === "string" ? r[key].trim() : r[key];
       }
       return newObj;
     });

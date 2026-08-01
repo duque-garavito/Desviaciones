@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import '../assets/css/Login.css';
 import { API_BASE_URL } from '../config';
 import logo from '../assets/images/fishlogo.png';
+import { useAuth } from '../core/Context/AuthContext';
 
-function Login({ onLoginExitoso }) {
+export default function LoginScreen() {
   const navigate = useNavigate();
+  const {login} =useAuth()
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -26,11 +28,7 @@ function Login({ onLoginExitoso }) {
 
       if (data.success) {
         console.log("Datos del usuario:", data.usuario);
-
-        if (onLoginExitoso) {
-          localStorage.setItem('usuario', JSON.stringify(data.usuario));
-          onLoginExitoso(data.usuario);
-        }
+          login(data.usuario);
         navigate('/dashboard');
       } else {
         alert("Error: " + data.message);
@@ -92,4 +90,4 @@ function Login({ onLoginExitoso }) {
   );
 }
 
-export default Login;
+
