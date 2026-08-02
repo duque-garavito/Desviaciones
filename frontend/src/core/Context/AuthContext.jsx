@@ -3,66 +3,76 @@ import { createContext, useContext, useEffect, useState } from "react";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-    const [usuarioActual, setUsuarioActual] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [turnoActual, setTurnoActual] = useState(null);
 
-    useEffect(() => {
-        try {
-            const guardado = localStorage.getItem("usuario");
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem("usuario");
+      const guardado2 = localStorage.getItem("turno");
 
-            if (guardado && guardado !== "undefined") {
-                const usuario = JSON.parse(guardado);
+      if (
+        guardado &&
+        guardado !== "undefined" &&
+        guardado2 &&
+        guardado2 !== "undefined"
+      ) {
+        const usuario = JSON.parse(guardado);
+        const turno = JSON.parse(guardado2);
 
-                if (usuario && !usuario.perfil && usuario.rol) {
-                    usuario.perfil =
-                        usuario.rol === "ADMINISTRADOR"
-                            ? "JF_CALID"
-                            : "SUP_CALI";
-                }
-
-                setUsuarioActual(usuario);
-            }
-        } catch (e) {
-            console.error("Error al leer sesión:", e);
-            localStorage.removeItem("usuario");
-        } finally {
-            setLoading(false);
+        if (usuario && !usuario.perfil && usuario.rol) {
+          usuario.perfil =
+            usuario.rol === "ADMINISTRADOR" ? "JF_CALID" : "SUP_CALI";
         }
-    }, []);
 
-    const login = (usuariodata) => {
-        setUsuarioActual(usuariodata);
-        localStorage.setItem("usuario", JSON.stringify(usuariodata));
-    };
+        setUsuarioActual(usuario);
+        setTurnoActual(turno);
+      }
+    } catch (e) {
+      console.error("Error al leer sesión:", e);
+      localStorage.removeItem("usuario");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    const logout = () => {
-        setUsuarioActual(null);
-        localStorage.removeItem("usuario");
-    };
+  const login = (usuariodata, turnodata) => {
+    setUsuarioActual(usuariodata);
+    setTurnoActual(turnodata);
+    localStorage.setItem("usuario", JSON.stringify(usuariodata));
+    localStorage.setItem("turno", JSON.stringify(turnodata));
+  };
 
-    return (
-        <AuthContext.Provider
-            value={{
-                usuarioActual,
-                loading,
-                login,
-                logout,
-                autenticado: !!usuarioActual,
-            }}
-        >
-            {children}
-        </AuthContext.Provider>
-    );
+  const logout = () => {
+    setUsuarioActual(null);
+    setTurnoActual(null);
+    localStorage.removeItem("usuario");
+    localStorage.removeItem("turno");
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        usuarioActual,
+        turnoActual,
+        loading,
+        login,
+        logout,
+        autenticado: !!usuarioActual,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-   const context = useContext(AuthContext);
+  const context = useContext(AuthContext);
 
-    if (!context) {
-        throw new Error(
-            'useAuthContext debe usarse dentro de AuthContextProvider'
-        );
-    }
+  if (!context) {
+    throw new Error("useAuthContext debe usarse dentro de AuthContextProvider");
+  }
 
-    return context;
+  return context;
 }

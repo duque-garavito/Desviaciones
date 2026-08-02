@@ -13,7 +13,7 @@ export default function MdlConfirmarInicio() {
     seleccionarReporte,
   } = useDesviacion();
 
-  const { usuarioActual } = useAuth();
+  const { usuarioActual, turnoActual } = useAuth();
 
   const [listaPlanes, setListaPlanes] = useState([]);
   const [loadingPlanes, setLoadingPlanes] = useState(false);
@@ -53,8 +53,9 @@ export default function MdlConfirmarInicio() {
     const peticion = await crearCabecera(
       usuarioActual.usuario,
       planSeleccionado,
-      usuarioActual.codArea,
+      turnoActual.codArea,
       articuloSeleccionado.cod_art,
+      turnoActual.codProgramacion,
     );
 
     if (peticion.error) {

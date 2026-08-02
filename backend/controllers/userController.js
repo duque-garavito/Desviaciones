@@ -34,6 +34,7 @@ const login = async (req, res) => {
           areaAsignada = prog.AREA_NOMBRE || "Área no definida";
           turno = prog.TURNO === "NOCHE" ? "Noche" : "Día";
           codArea = prog.COD_AS || "NAN";
+          codProgramacion = prog.COD_PROGRAMACION || "NAN";
         }
       }
 
@@ -45,9 +46,12 @@ const login = async (req, res) => {
           usuario: user.COD_USR,
           email: user.USUARIO,
           perfil: perfilNorm,
+        },
+        turno: {
           areaAsignada,
           turno,
           codArea,
+          codProgramacion,
         },
       });
     } else {

@@ -121,7 +121,6 @@ const createHeader = async (req, res) => {
       nro_ref,
       cod_usr,
       parte_produccion,
-      null,
     );
     res.json(result);
   } catch (error) {

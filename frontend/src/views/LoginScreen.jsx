@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../assets/css/Login.css';
-import { API_BASE_URL } from '../config';
-import logo from '../assets/images/fishlogo.png';
-import { useAuth } from '../core/Context/AuthContext';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../assets/css/Login.css";
+import { API_BASE_URL } from "../config";
+import logo from "../assets/images/fishlogo.png";
+import { useAuth } from "../core/Context/AuthContext";
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const {login} =useAuth()
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,9 +17,9 @@ export default function LoginScreen() {
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/usuarios/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ username, password }),
       });
@@ -28,8 +28,8 @@ export default function LoginScreen() {
 
       if (data.success) {
         console.log("Datos del usuario:", data.usuario);
-          login(data.usuario);
-        navigate('/dashboard');
+        login(data.usuario, data.turno);
+        navigate("/dashboard");
       } else {
         alert("Error: " + data.message);
       }
@@ -39,9 +39,9 @@ export default function LoginScreen() {
       const redStatus = navigator.onLine ? "Red activa" : "Sin conexión Wi-Fi";
       const detalleError = [
         `URL: ${urlDestino}`,
-        `Error: ${error?.name || 'Error'} - ${error?.message || String(error)}`,
-        `Estado Red: ${redStatus}`
-      ].join('\n\n');
+        `Error: ${error?.name || "Error"} - ${error?.message || String(error)}`,
+        `Estado Red: ${redStatus}`,
+      ].join("\n\n");
       alert(`⚠️ No se pudo conectar con el servidor:\n\n${detalleError}`);
     }
   };
@@ -83,11 +83,11 @@ export default function LoginScreen() {
             />
           </div>
 
-          <button type="submit" className="login-btn">Iniciar Sesión</button>
+          <button type="submit" className="login-btn">
+            Iniciar Sesión
+          </button>
         </form>
       </div>
     </div>
   );
 }
-
-

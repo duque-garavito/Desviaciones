@@ -258,7 +258,6 @@ class InspectionModel {
     nro_ref,
     cod_usr,
     parte_produccion,
-    camposTexto,
   ) {
     const conn = await db.getConnection();
     try {
@@ -295,7 +294,7 @@ class InspectionModel {
          END;`,
         {
           ls_AREA: area,
-          ls_TIPO_REF: "",
+          ls_TIPO_REF: "DESV",
           ls_NRO_REF: nro_ref || "",
           ls_COD_USR: cod_usr,
           ls_cod_art: articulo || "",
@@ -323,7 +322,7 @@ class InspectionModel {
       } */
 
       // 2. Si vienen campos de texto (ej. Recepción: Procedencia, Cámara, Proveedor), registrarlos
-      if (camposTexto && Array.isArray(camposTexto)) {
+      /* if (camposTexto && Array.isArray(camposTexto)) {
         for (const ct of camposTexto) {
           await conn.execute(
             `BEGIN
@@ -353,7 +352,7 @@ class InspectionModel {
             },
           );
         }
-      }
+      } */
 
       await conn.commit();
       return { success: true, cod_rep_c };

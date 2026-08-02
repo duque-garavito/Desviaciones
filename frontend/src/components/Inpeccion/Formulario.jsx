@@ -10,13 +10,20 @@ import {
 } from "../../core/services/Desviacion.service";
 
 export default function Formulario({ articulo, codRepC }) {
-  const { articuloSeleccionado, reporteGenerado, limpiarArticulo } =
-    useDesviacion();
-  const { usuarioActual } = useAuth();
+  const {
+    articuloSeleccionado,
+    reporteGenerado,
+    limpiarArticulo,
+    muestrasActuales,
+    asignarMuestras,
+  } = useDesviacion();
+  const { usuarioActual, turnoActual } = useAuth();
   // Separar preguntas tipo V (texto) de las numéricas/binarias
   // const preguntasMuestreo = preguntas.filter(p => p.tipo_campo !== 'V');
 
-  // const [muestraActual, setMuestraActual] = useState(1);
+  const [muestraActual, setMuestraActual] = useState(
+    muestrasActuales.length + 1,
+  );
   const [desviacionSeleccionada, setDesviacionSeleccionada] = useState(null);
   const [causaSeleccionada, setCausaSeleccionada] = useState(null);
 
@@ -35,8 +42,6 @@ export default function Formulario({ articulo, codRepC }) {
 
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
-
-  const validarReporteAbiertoBD = () => {};
 
   // Auto-guardar borrador local Y sincronizar en BD de Oracle ante cualquier cambio en las muestras
   /* useEffect(() => {
@@ -120,7 +125,7 @@ export default function Formulario({ articulo, codRepC }) {
       try {
         const params = new URLSearchParams();
 
-        params.set("cod_as", usuarioActual.codArea);
+        params.set("cod_as", turnoActual.codArea);
 
         // params.set("cod_art", String(articuloSeleccionado.cod_art).trim());
         const subCatVal = articuloSeleccionado?.sub_cat_art;
@@ -168,7 +173,7 @@ export default function Formulario({ articulo, codRepC }) {
   const confirmarGuardar = async () => {
     // if (causaSeleccionada) {
     const muestra = {
-      nro: muestrasGuardadas.length + 1,
+      nro: muestraActual,
       desviacionLabel: desviacionSeleccionada?.motivo_desviacion || null,
       desviacionCod: desviacionSeleccionada?.cod_pregunta || null,
       causaLabel: causaSeleccionada?.descr || null,
@@ -194,7 +199,10 @@ export default function Formulario({ articulo, codRepC }) {
       ],
     );
 
-    if (peticion.success) setMuestrasGuardadas((prev) => [...prev, muestra]);
+    if (peticion.success) {
+      asignarMuestras(muestra);
+      setMuestraActual((prev) => prev + 1);
+    }
     /* } else {
       const muestra = {
         nro: muestraActual,
@@ -429,9 +437,7 @@ export default function Formulario({ articulo, codRepC }) {
       <div className="ins-form-body">
         <div className="ins-muestra-row">
           <label className="ins-muestra-label">Muestra N°</label>
-          <span className="ins-muestra-numero">
-            {muestrasGuardadas.length + 1}
-          </span>
+          <span className="ins-muestra-numero">{muestraActual}</span>
           {desviacionSeleccionada && (
             <span
               className="ins-sel-tag categoria"
@@ -564,8 +570,7 @@ export default function Formulario({ articulo, codRepC }) {
           <div className="ins-modal-card">
             <h3>Confirmar Muestra</h3>
             <p>
-              ¿Desea registrar la{" "}
-              <strong>Muestra N° {muestrasGuardadas.length + 1}</strong>{" "}
+              ¿Desea registrar la <strong>Muestra N° {muestraActual}</strong>{" "}
               {causaSeleccionada ? (
                 <>
                   con la desviación:{" "}

@@ -2,7 +2,13 @@ import { API_BASE_URL } from "../../config";
 
 const apiRoute = `${API_BASE_URL}/api/inspecciones`;
 
-export const crearCabecera = async (usuario, planDiario, area, articulo) => {
+export const crearCabecera = async (
+  usuario,
+  planDiario,
+  area,
+  articulo,
+  programacion,
+) => {
   try {
     const res = await fetch(`${apiRoute}/crear-cabecera`, {
       method: "POST",
@@ -10,7 +16,7 @@ export const crearCabecera = async (usuario, planDiario, area, articulo) => {
       body: JSON.stringify({
         //cod_rv: (currentFormInfo || formularioInfo)?.cod_rv,
         area,
-        nro_ref: "",
+        nro_ref: programacion,
         cod_usr: usuario,
         parte_produccion: planDiario,
         articulo,

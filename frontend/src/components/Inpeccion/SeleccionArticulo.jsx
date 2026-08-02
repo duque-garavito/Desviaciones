@@ -11,7 +11,7 @@ export default function SeleccionArticulo() {
   const [busqueda, setBusqueda] = useState("");
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const { usuarioActual } = useAuth();
+  const { usuarioActual, turnoActual } = useAuth();
   const { seleccionarArticulo, articuloSeleccionado, reporteGenerado } =
     useDesviacion();
 
@@ -22,7 +22,7 @@ export default function SeleccionArticulo() {
       if (termino && termino.trim().length >= 2)
         params.set("buscar", termino.trim());
       if (usuarioActual)
-        params.set("cod_as", String(usuarioActual.codArea).trim());
+        params.set("cod_as", String(turnoActual.codArea).trim());
 
       const peticion = await obtenerArticulos(params);
 

@@ -64,7 +64,7 @@ class UserModel {
 
     const results = await db.execute(
       `
-      SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE,a.cod_as
+      SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE,a.cod_as,pd.cod_pro cod_programacion
       FROM PROGRAMACION_CALIDAD_DET pd
       LEFT JOIN AREAS_SUPERVISION a ON pd.COD_AS = a.COD_AS
       WHERE LOWER(TRIM(pd.COD_USR)) = LOWER(:userId) AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
