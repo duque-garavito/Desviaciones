@@ -7,7 +7,7 @@ import { crearCabecera } from "../../core/services/Desviacion.service";
 export default function MdlConfirmarInicio() {
   const {
     articuloSeleccionado,
-    seleccionarArticulo,
+    limpiarDatosInspeccion,
     planSeleccionado,
     seleccionarPlan,
     seleccionarReporte,
@@ -116,30 +116,31 @@ export default function MdlConfirmarInicio() {
             style={{
               fontSize: "15px",
               fontWeight: "700",
-              color: "#1e3a8a",
+              color: parteObj || loadingPlanes ? "#1e3a8a" : "#ef4444",
             }}
           >
-            {parteObj
-              ? `${parteObj.cod_parte_producc} - ${parteObj.descr_especie} ${parteObj.fecha}`
-              : "Asignado automáticamente"}
+            {loadingPlanes
+              ? "CARGANDO..."
+              : parteObj
+                ? `${parteObj.cod_parte_producc} - ${parteObj.descr_especie} ${parteObj.fecha}`
+                : "NO SE HA ENCONTRADO PLAN DIARIO"}
           </div>
         </div>
 
         <div className="ins-modal-acciones">
-          <button
-            className="ins-modal-no"
-            onClick={() => seleccionarArticulo(null)}
-          >
+          <button className="ins-modal-no" onClick={limpiarDatosInspeccion}>
             Cancelar
           </button>
 
-          <button
-            className="ins-modal-yes"
-            onClick={generarCabecera}
-            disabled={loadingPlanes || !parteObj}
-          >
-            {loadingPlanes ? "Cargando..." : "Confirmar"}
-          </button>
+          {parteObj && (
+            <button
+              className="ins-modal-yes"
+              onClick={generarCabecera}
+              disabled={loadingPlanes || !parteObj}
+            >
+              {loadingPlanes ? "Cargando..." : "Confirmar"}
+            </button>
+          )}
         </div>
       </div>
     </div>
