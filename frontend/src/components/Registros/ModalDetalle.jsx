@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {
-  FileText,
-  ClipboardList,
-  X,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import { API_BASE_URL } from "../config";
-import "../assets/css/ModalDetalle.css";
+import { FileText, ClipboardList, X } from "lucide-react";
+import { API_BASE_URL } from "../../config";
+import "../../assets/css/ModalDetalle.css";
 
 function ModalDetalle({ id, isOpen, onClose }) {
   const [registrosGroup, setRegistrosGroup] = useState();

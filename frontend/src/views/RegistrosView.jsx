@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Layout from "../components/Layout";
 import { API_BASE_URL } from "../config";
+import "../assets/css/Registros.css";
 import {
   FileText,
   Search,
   Eye,
-  Edit3,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -15,8 +14,7 @@ import {
   MapPin,
   Inbox,
 } from "lucide-react";
-import ModalDetalle from "../components/ModalDetalle";
-import "../assets/css/Registros.css";
+import ModalDetalle from "../components/Registros/ModalDetalle";
 
 export default function RegistrosView({ usuario, onLogout }) {
   const navigate = useNavigate();

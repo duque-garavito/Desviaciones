@@ -916,7 +916,8 @@ order by t3.descr, t2.descr
       SELECT  
              mp.COD_PREGUNTA, 
              mp.DESCR as MOTIVO_DESVIACION,
-              rv.cod_rv
+              rv.cod_rv,
+               mp.tipo_campo
         FROM MAESTRO_PREGUNTAS mp
         JOIN PREGUNTAS_VERSIONADO pv ON mp.COD_PREGUNTA = pv.COD_PREGUNTA
         JOIN REPORTES_VERSIONADO rv ON pv.COD_RV = rv.COD_RV

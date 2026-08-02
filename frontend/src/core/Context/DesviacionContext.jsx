@@ -17,6 +17,7 @@ export function DesviacionProvider({ children }) {
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
   const [reporteGenerado, setReporteGenerado] = useState(null);
   const [muestrasActuales, setMuestrasActuales] = useState([]);
+  const [datosGenerales, setDatosGenerales] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const seleccionarArticulo = (articulo) => {
@@ -38,6 +39,16 @@ export function DesviacionProvider({ children }) {
     setMuestrasActuales((prev) => [...prev, muestra]);
   };
 
+  const asignarDatosGenerales = (datos) => {
+    localStorage.setItem("datosGenerales", JSON.stringify(datos));
+    setDatosGenerales(datos);
+  };
+
+  const limpiarDatosGenerales = () => {
+    localStorage.removeItem("datosGenerales");
+    setDatosGenerales([]);
+  };
+
   const limpiarMuestrasActuales = () => {
     localStorage.removeItem("muestrasActuales");
     setMuestrasActuales([]);
@@ -49,6 +60,7 @@ export function DesviacionProvider({ children }) {
     limpiarPlan();
     limpiarReporte();
     limpiarMuestrasActuales();
+    limpiarDatosGenerales();
   };
 
   const limpiarArticulo = () => {
@@ -65,6 +77,7 @@ export function DesviacionProvider({ children }) {
   const limpiarReporte = () => {
     localStorage.removeItem("reporteGenerado");
     setReporteGenerado(null);
+    limpiarDatosGenerales();
   };
 
   useEffect(() => {
@@ -73,6 +86,7 @@ export function DesviacionProvider({ children }) {
       const plan = localStorage.getItem("planSeleccionado");
       const reporte = localStorage.getItem("reporteGenerado");
       const muestras = localStorage.getItem("muestrasActuales");
+      const datosGenerales = localStorage.getItem("datosGenerales");
 
       if (articulo) {
         setArticuloSeleccionado(JSON.parse(articulo));
@@ -85,6 +99,9 @@ export function DesviacionProvider({ children }) {
       }
       if (muestras) {
         setMuestrasActuales(JSON.parse(muestras));
+      }
+      if (datosGenerales) {
+        setDatosGenerales(JSON.parse(datosGenerales));
       }
     } catch (error) {
       console.error("Error al leer datos del estado:", error);
@@ -116,6 +133,8 @@ export function DesviacionProvider({ children }) {
     limpiarReporte,
     asignarMuestras,
     muestrasActuales,
+    asignarDatosGenerales,
+    datosGenerales,
   };
 
   return (
