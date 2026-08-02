@@ -568,7 +568,7 @@ export default function RegistrosView({ usuario, onLogout }) {
                     <th>Área</th>
                     <th>Inspector</th>
                     <th>Formulario</th>
-                    <th>Artículo / Ref.</th>
+                    <th>Artículo(s)</th>
                     {/*<th>Respuestas</th>
                       {/*<th>Acciones</th>*/}
                   </tr>
@@ -596,7 +596,7 @@ export default function RegistrosView({ usuario, onLogout }) {
                         <span className="badge-version">v{reg.version}</span>
                       </td>
                       <td style={{ fontWeight: "600", color: "#1e293b" }}>
-                        <div>
+                        {/*  <div>
                           {(() => {
                             const lotesArr = (reg.lote || "")
                               .split(",")
@@ -605,7 +605,7 @@ export default function RegistrosView({ usuario, onLogout }) {
                             const lotesUnicos = [...new Set(lotesArr)];
                             return lotesUnicos.join(", ") || "—";
                           })()}
-                        </div>
+                        </div> */}
                         {reg.nom_articulo && reg.nom_articulo !== "—" && (
                           <div
                             style={{
