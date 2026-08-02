@@ -12,122 +12,132 @@ export default function MdlConfirmarInicio() {
     seleccionarPlan,
     seleccionarReporte,
   } = useDesviacion();
+
   const { usuarioActual } = useAuth();
 
   const [listaPlanes, setListaPlanes] = useState([]);
   const [loadingPlanes, setLoadingPlanes] = useState(false);
 
-  const obtenerPlanes = async () => {
-    setLoadingPlanes(true);
-    const peticion = await obtenerPlanDiaEspecie(articuloSeleccionado.especie);
-    if ("error" in peticion) setListaPlanes([]);
-    else setListaPlanes(peticion.data);
+  useEffect(() => {
+    const obtenerPlanes = async () => {
+      if (!articuloSeleccionado) return;
 
-    setLoadingPlanes(false);
-  };
+      setLoadingPlanes(true);
+
+      const peticion = await obtenerPlanDiaEspecie(
+        articuloSeleccionado.especie,
+      );
+
+      if ("error" in peticion) {
+        setListaPlanes([]);
+      } else {
+        setListaPlanes(peticion.data);
+      }
+
+      setLoadingPlanes(false);
+    };
+
+    obtenerPlanes();
+  }, [articuloSeleccionado]);
+
+  // Asignar automáticamente el primer plan SOLO cuando ya se cargó la lista
+  useEffect(() => {
+    if (!listaPlanes.length) return;
+
+    if (!planSeleccionado) {
+      seleccionarPlan(listaPlanes[0].cod_parte_producc);
+    }
+  }, [listaPlanes, planSeleccionado, seleccionarPlan]);
 
   const generarCabecera = async () => {
     const peticion = await crearCabecera(
       usuarioActual.usuario,
       planSeleccionado,
       usuarioActual.codArea,
-      articuloSeleccionado.COD_ART,
+      articuloSeleccionado.cod_art,
     );
 
     if (peticion.error) {
-      console.error("Error creando cabecera en Oracle:", peticion.message);
+      console.error("Error creando cabecera:", peticion.message);
       return;
     }
 
-    seleccionarReporte({ codigoReporte: peticion.codigo });
+    seleccionarReporte({
+      codigoReporte: peticion.codigo,
+    });
   };
 
-  useEffect(() => {
-    obtenerPlanes();
-  }, []);
+  const parteObj =
+    listaPlanes.find((p) => p.cod_parte_producc === planSeleccionado) ||
+    listaPlanes[0];
 
   return (
     <div className="ins-modal-overlay">
       <div className="ins-modal-card">
         <h3>Iniciar Inspección</h3>
+
         <p style={{ marginBottom: "12px" }}>
-          ¿Desea iniciar la inspección para el artículo:{" "}
+          ¿Desea iniciar la inspección para el artículo{" "}
           <strong>
-            {articuloSeleccionado.COD_ART}{" "}
-            {articuloSeleccionado.NOM_ARTICULO
-              ? `- ${articuloSeleccionado.NOM_ARTICULO}`
+            {articuloSeleccionado.cod_art}
+            {articuloSeleccionado.desc_art
+              ? ` - ${articuloSeleccionado.desc_art}`
               : ""}
           </strong>
           ?
         </p>
 
-        {
-          /* Parte de Producción automático asignado desde Oracle */
+        <div
+          style={{
+            textAlign: "left",
+            marginBottom: "16px",
+            backgroundColor: "#f8fafc",
+            padding: "10px 14px",
+            borderRadius: "10px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <label
+            style={{
+              display: "block",
+              fontSize: "12px",
+              fontWeight: "700",
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              marginBottom: "4px",
+            }}
+          >
+            Parte de Producción del Día
+          </label>
 
           <div
             style={{
-              textAlign: "left",
-              marginBottom: "16px",
-              backgroundColor: "#f8fafc",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              border: "1px solid #e2e8f0",
+              fontSize: "15px",
+              fontWeight: "700",
+              color: "#1e3a8a",
             }}
           >
-            <label
-              style={{
-                display: "block",
-                fontSize: "12px",
-                fontWeight: "700",
-                color: "#64748b",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                marginBottom: "4px",
-              }}
-            >
-              Parte de Producción del Día:
-            </label>
-            <div
-              style={{
-                fontSize: "15px",
-                fontWeight: "700",
-                color: "#1e3a8a",
-              }}
-            >
-              {(() => {
-                const parteObj =
-                  listaPlanes.find(
-                    (p) => p.cod_parte_producc === planSeleccionado,
-                  ) || listaPlanes[0];
-                if (parteObj) {
-                  const descStr = parteObj.descr_especie
-                    ? ` ${parteObj.descr_especie}`
-                    : "";
-                  seleccionarPlan(parteObj.cod_parte_producc);
-                  return `${parteObj.cod_parte_producc} - ${descStr} ${parteObj.fecha}`;
-                }
-                return planSeleccionado || "Asignado automáticamente";
-              })()}
-            </div>
+            {parteObj
+              ? `${parteObj.cod_parte_producc} - ${parteObj.descr_especie} ${parteObj.fecha}`
+              : "Asignado automáticamente"}
           </div>
-        }
+        </div>
 
         <div className="ins-modal-acciones">
           <button
             className="ins-modal-no"
-            onClick={() => {
-              seleccionarArticulo(null);
-              // setParteProduccionInput('');
-            }}
+            onClick={() => seleccionarArticulo(null)}
           >
             Cancelar
           </button>
+
           <button
             className="ins-modal-yes"
             onClick={generarCabecera}
-            disabled={loadingPlanes}
+            disabled={loadingPlanes || !parteObj}
           >
-            Confirmar
+            {loadingPlanes ? "Cargando..." : "Confirmar"}
           </button>
         </div>
       </div>

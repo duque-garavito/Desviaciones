@@ -32,3 +32,90 @@ export const crearCabecera = async (usuario, planDiario, area, articulo) => {
     };
   }
 };
+
+export const obtenterDesviaciones = async (params) => {
+  try {
+    const res = await fetch(
+      `${apiRoute}/desviaciones-articulo?${params.toString()}`,
+    );
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    return {
+      success: true,
+      desviaciones: data.desviaciones,
+    };
+  } catch (error) {
+    console.error("Error obteniendo desviaciones:", error);
+    return {
+      error: true,
+      message: error.message,
+    };
+  }
+};
+
+export const obtenterCausas = async (subcat) => {
+  console.log(subcat);
+  try {
+    const res = await fetch(
+      `${apiRoute}/causas-desviacion/?cod_sub_cat=${subcat}`,
+    );
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    return {
+      success: true,
+      causas: data.causas || [],
+    };
+  } catch (error) {
+    console.error("Error obteniendo causas:", error);
+    return {
+      error: true,
+      message: error.message,
+    };
+  }
+};
+
+export const SaveDesviacion = async (
+  codigoReporte,
+  ReporteVersion,
+
+  usuario,
+  articulo,
+  sub_cat,
+  tipo_art,
+  causa,
+  respuestas,
+) => {
+  try {
+    const res = await fetch(`${apiRoute}/sincronizar-progreso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cod_rep_c: codigoReporte,
+        cod_rv: ReporteVersion,
+        cod_usr: usuario,
+        cod_art: articulo,
+        tipo_art,
+        sub_cat,
+        causa,
+        respuestas,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message);
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error guardando desviacion:", error);
+    return {
+      error: true,
+      message: error.message,
+    };
+  }
+};

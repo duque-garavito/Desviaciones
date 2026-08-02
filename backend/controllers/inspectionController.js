@@ -84,13 +84,14 @@ const buscarArticulos = async (req, res) => {
 };
 
 const getDeviationCauses = async (req, res) => {
-  const { cod_reporte, cod_as, cod_sub_cat, cod_art } = req.query;
+  const { cod_sub_cat } = req.query;
+
   try {
     const causas = await InspectionModel.getDeviationCauses(
-      cod_reporte,
-      cod_as,
+      // cod_reporte,
+      // cod_as,
       cod_sub_cat,
-      cod_art,
+      // cod_art,
     );
     res.json({ success: true, causas });
   } catch (error) {
@@ -99,11 +100,10 @@ const getDeviationCauses = async (req, res) => {
 };
 
 const getDeviationsByArticle = async (req, res) => {
-  const { cod_as, cod_art, cod_sub_cat } = req.query;
+  const { cod_as, cod_sub_cat } = req.query;
   try {
     const desviaciones = await InspectionModel.getDeviationsByArticle(
       cod_as,
-      cod_art,
       cod_sub_cat,
     );
     res.json({ success: true, desviaciones });
@@ -130,16 +130,29 @@ const createHeader = async (req, res) => {
 };
 
 const syncProgress = async (req, res) => {
-  const { cod_rep_c, cod_rv, cod_usr, respuestas, conteo_muestra, nro_ref } =
-    req.body;
+  const {
+    cod_rep_c,
+    cod_rv,
+    cod_usr,
+    cod_art,
+    tipo_art,
+    sub_cat,
+    causa,
+    respuestas,
+  } = req.body;
   try {
     const result = await InspectionModel.syncProgress(
       cod_rep_c,
       cod_rv,
+
       cod_usr,
+      // respuestas,
+      // conteo_muestra,
+      cod_art,
+      tipo_art,
+      sub_cat,
+      causa,
       respuestas,
-      conteo_muestra,
-      nro_ref,
     );
     res.json(result);
   } catch (error) {

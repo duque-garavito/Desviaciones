@@ -315,12 +315,12 @@ class InspectionModel {
       const cod_rep_c = result.outBinds.ls_COD_REP_C;
 
       // 1b. Si se ingresó Parte de Producción, actualizarlo en la cabecera creada
-      if (parte_produccion && String(parte_produccion).trim() !== "") {
+      /*  if (parte_produccion && String(parte_produccion).trim() !== "") {
         await conn.execute(
           `UPDATE REPORTE_RESPUESTAS SET PARTE_PRODUCCION = :parte WHERE COD_REP_C = :cod_rep_c`,
           { parte: String(parte_produccion).trim(), cod_rep_c },
         );
-      }
+      } */
 
       // 2. Si vienen campos de texto (ej. Recepción: Procedencia, Cámara, Proveedor), registrarlos
       if (camposTexto && Array.isArray(camposTexto)) {
@@ -370,13 +370,16 @@ class InspectionModel {
     cod_rep_c,
     cod_rv,
     cod_usr,
+    // respuesta,
+    cod_art,
+    tipo_art,
+    sub_cat,
+    causa,
     respuestas,
-    conteo_muestra,
-    nro_ref_param,
   ) {
     const conn = await db.getConnection();
     try {
-      // Obtener el artículo (NRO_REF) y TIPO_REF real de la cabecera
+      /* // Obtener el artículo (NRO_REF) y TIPO_REF real de la cabecera
       let codArt = nro_ref_param || "DEFAULT";
       let tipoArt = "MP  ";
       const resHeader = await conn.execute(
@@ -386,16 +389,16 @@ class InspectionModel {
       if (resHeader.rows && resHeader.rows.length > 0) {
         if (resHeader.rows[0][0]) codArt = resHeader.rows[0][0];
         if (resHeader.rows[0][1]) tipoArt = resHeader.rows[0][1];
-      }
+      } */
 
       // 1. Limpiar causas y respuestas numéricas anteriores de este reporte para sobreescribir el avance
-      await conn.execute(
+      /*  await conn.execute(
         `DELETE FROM REPORTE_RESPUESTAS_DET_CAUSAS WHERE COD_REP_C = :cod_rep_c`,
         { cod_rep_c },
-      );
+      ); */
 
       // Limpiar detalles de preguntas N (muestreo) manteniendo los de tipo V si ya se registraron
-      await conn.execute(
+      /*  await conn.execute(
         `
         DELETE FROM REPORTE_RESPUESTAS_DET 
         WHERE COD_REP_C = :cod_rep_c 
@@ -404,12 +407,12 @@ class InspectionModel {
           )
       `,
         { cod_rep_c },
-      );
+      ); */
 
       // 2. Re-insertar respuestas actualizadas del muestreo
+
       for (let i = 0; i < respuestas.length; i++) {
-        const r = respuestas[i];
-        if (r.tipo_campo === "V") continue; // Los campos V ya están insertados
+        const respuesta = respuestas[i];
 
         await conn.execute(
           `BEGIN
@@ -417,28 +420,37 @@ class InspectionModel {
                :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
                :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
                :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR,
-               :ls_COD_ART, :ls_TIPO_ART
+               :ls_COD_ART, :ls_TIPO_ART,:ls_sub_cat,:ls_causa
              );
            END;`,
           {
             ls_COD_REP_C: cod_rep_c,
-            ls_COD_PREGUNTA: r.cod_pregunta,
+            ls_COD_PREGUNTA: respuesta.cod_pregunta,
             ls_COD_RV: cod_rv,
             ls_RESP_BLOB: { type: db.oracledb.DB_TYPE_BLOB, val: null },
-            ls_RESP_TIPO_BLOB: { type: db.oracledb.DB_TYPE_VARCHAR, val: null },
-            ls_RESP_CHAR: r.resp_char || null,
+            ls_RESP_TIPO_BLOB: {
+              type: db.oracledb.DB_TYPE_VARCHAR,
+              val: null,
+            },
+            ls_RESP_CHAR: respuesta.resp_char || null,
             ln_RESP_NUMBER:
-              r.resp_number !== undefined && r.resp_number !== null
-                ? Number(r.resp_number)
+              respuesta.resp_number !== undefined &&
+              respuesta.resp_number !== null
+                ? Number(respuesta.resp_number)
                 : null,
-            ls_RESP_VARCHAR: r.resp_varchar || null,
+            ls_RESP_VARCHAR: respuesta.resp_varchar || null,
             ls_COD_USR: cod_usr,
-            ls_COD_ART: codArt,
-            ls_TIPO_ART: tipoArt,
+            ls_COD_ART: cod_art,
+            ls_TIPO_ART: tipo_art,
+            ls_sub_cat: sub_cat,
+            ls_causa: causa,
           },
         );
 
-        if (r.causas && Array.isArray(r.causas)) {
+        // 3. Actualizar desvíos por artículo
+      }
+
+      /* if (r.causas && Array.isArray(r.causas)) {
           for (const c of r.causas) {
             const codMcd = typeof c === "object" ? c.cod_mcd : c;
             const codSubCat = typeof c === "object" ? c.cod_sub_cat : null;
@@ -456,21 +468,9 @@ class InspectionModel {
               },
             );
           }
-        }
-      }
+        } */
 
-      // 3. Actualizar desvíos por artículo
-      await conn.execute(
-        `BEGIN
-           USP_REPORTE_RESPUESTAS_DESVIACION_ARTICULO(:ls_COD_REP_C, :ls_COD_ART);
-         END;`,
-        {
-          ls_COD_REP_C: cod_rep_c,
-          ls_COD_ART: codArt,
-        },
-      );
-
-      if (conteo_muestra && !isNaN(parseInt(conteo_muestra))) {
+      /*   if (conteo_muestra && !isNaN(parseInt(conteo_muestra))) {
         const cantVal = parseInt(conteo_muestra);
         await conn.execute(
           `UPDATE REPORTE_RESPUESTAS_DESVIACION_ARTICULO
@@ -478,10 +478,10 @@ class InspectionModel {
             WHERE COD_REP_C = :cod_rep_c`,
           { cantVal, cod_rep_c },
         );
-      }
+      } */
 
       await conn.commit();
-      return { success: true, cod_rep_c };
+      return { success: true /* , cod_rep_c */ };
     } catch (error) {
       await conn.rollback();
       throw error;
@@ -711,7 +711,8 @@ class InspectionModel {
                t.DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
                t.SUB_CAT_ART,
-               es.especie
+               es.especie,
+               'MP' TIPO_ART
           FROM ARTICULO t
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
@@ -736,7 +737,8 @@ class InspectionModel {
                t.DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
                t.SUB_CAT_ART,
-               es.especie
+               es.especie,
+               'PPTT' TIPO_ART
           FROM ARTICULO t
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
@@ -761,7 +763,8 @@ class InspectionModel {
                '' as DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
                t.cod_subcat,
-               es.especie
+               es.especie,
+               'CONGE' TIPO_ART
           FROM ARTICULO_CONGE t
           JOIN ARTICULO_SUB_CATEG t2 ON t.cod_subcat = t2.COD_SUB_CAT
           join articulo_categ t3 on t2.cat_art=t3.cat_art
@@ -781,23 +784,23 @@ class InspectionModel {
     return rows.map((r) => {
       const low = this.toLowercaseKeys(r);
       low.cod_art = low.cod_art || r.COD_ART || r.COD_ART_CONG || "";
-      low.COD_ART = low.cod_art;
+      //low.COD_ART = low.cod_art;
 
       low.nom_articulo =
         low.nom_articulo || r.NOM_ARTICULO || r.DESC_ART || r.DESCR || "";
-      low.NOM_ARTICULO = low.nom_articulo;
+      //low.NOM_ARTICULO = low.nom_articulo;
 
       low.desc_sub_cat = low.desc_sub_cat || r.DESC_SUB_CAT || "";
-      low.DESC_SUB_CAT = low.desc_sub_cat;
+      //low.DESC_SUB_CAT = low.desc_sub_cat;
 
       low.desc_etiqueta = low.desc_etiqueta || r.DESC_ETIQUETA || "";
-      low.DESC_ETIQUETA = low.desc_etiqueta;
+      //low.DESC_ETIQUETA = low.desc_etiqueta;
 
       low.sub_cat_art = low.sub_cat_art || r.SUB_CAT_ART || r.COD_SUBCAT || "";
-      low.SUB_CAT_ART = low.sub_cat_art;
+      //low.SUB_CAT_ART = low.sub_cat_art;
 
       low.especie = low.especie || r.ESPECIE || "";
-      low.ESPECIE = low.especie;
+      //low.ESPECIE = low.especie;
 
       return low;
     });
@@ -805,10 +808,10 @@ class InspectionModel {
 
   // Obtener causas de desviación filtradas por área y artículo
   // Obtener causas de desviación filtradas por área y artículo / subcategoría
-  static async getDeviationCauses(codReporte, codAs, codSubCat, codArt) {
+  static async getDeviationCauses(codSubCat) {
     let subCat = codSubCat ? String(codSubCat).trim() : null;
 
-    if (!subCat && codArt && codArt.trim() !== "") {
+    /* if (!subCat && codArt && codArt.trim() !== "") {
       const artCode = String(codArt).trim();
       const art1 = await db.execute(
         `SELECT SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`,
@@ -825,57 +828,53 @@ class InspectionModel {
           subCat = String(art2[0].COD_SUBCAT).trim();
         }
       }
+    } */
+
+    /* if (subCat) {
+      
     }
+ */
 
-    if (subCat) {
-      let areaWhere = "";
-      const replacements = { subCat };
+    /* let areaWhere = "";
+    const replacements = { subCat };
 
-      if (codAs && codAs.trim() !== "") {
-        areaWhere = " AND pcd.COD_AS = :codAs ";
-        replacements.codAs = String(codAs).trim();
-      }
+    if (codAs && codAs.trim() !== "") {
+      areaWhere = " AND pcd.COD_AS = :codAs ";
+      replacements.codAs = String(codAs).trim();
+    } */
 
-      const querySubCat = `
-        SELECT MIN(mcd.COD_MCD) as COD_MCD,
-               mcd.DESCR,
-               MIN(cc.DESCR) as CATEGORIA,
-               MIN(mcdf.COD_SUB_CAT) as COD_SUB_CAT
-          FROM MAESTRO_CAUSAS_DESVIACION mcd
-          JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
-          JOIN MAESTRO_CAUSAS_DESVIACION_FILTRO mcdf ON mcd.COD_MCD = mcdf.COD_MCD
-          JOIN PLANTILLA_CAUSA_DESVIACION pcd ON TRIM(mcdf.COD_SUB_CAT) = TRIM(pcd.COD_SUB_CAT)
-         WHERE TRIM(mcdf.COD_SUB_CAT) = :subCat
-           ${areaWhere}
-         GROUP BY mcd.DESCR
-         ORDER BY mcd.DESCR
+    const querySubCat = `
+        select t2.cod_mcd,t2.descr,t3.descr categoria,t.cod_sub_cat from maestro_causas_desviacion_filtro t,maestro_causas_desviacion t2,categoria_causa t3
+where t.cod_mcd=t2.cod_mcd and t2.cod_cat_causa=t3.cod_cat_causa
+and t.cod_sub_cat=:subcat
+order by t3.descr, t2.descr
       `;
-      const causasSub = await db.execute(querySubCat, replacements);
-      if (causasSub.length > 0) {
-        return causasSub.map((r) => this.toLowercaseKeys(r));
-      }
+    const causasSub = await db.execute(querySubCat, { subcat: subCat });
+
+    console.log(codSubCat);
+    if (causasSub.length > 0) {
+      return causasSub.map((r) => this.toLowercaseKeys(r));
     }
-
     // 2. Fallback: catálogo maestro completo de causas
-    const queryDirect = `
-      SELECT MIN(mcd.COD_MCD) as COD_MCD,
-             mcd.DESCR,
-             MIN(cc.DESCR) as CATEGORIA
-        FROM MAESTRO_CAUSAS_DESVIACION mcd
-        JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
-       GROUP BY mcd.DESCR
-       ORDER BY mcd.DESCR
-    `;
+    // const queryDirect = `
+    //   SELECT MIN(mcd.COD_MCD) as COD_MCD,
+    //          mcd.DESCR,
+    //          MIN(cc.DESCR) as CATEGORIA
+    //     FROM MAESTRO_CAUSAS_DESVIACION mcd
+    //     JOIN CATEGORIA_CAUSA cc ON mcd.COD_CAT_CAUSA = cc.COD_CAT_CAUSA
+    //    GROUP BY mcd.DESCR
+    //    ORDER BY mcd.DESCR
+    // `;
 
-    const causas = await db.execute(queryDirect);
-    return causas.map((r) => this.toLowercaseKeys(r));
+    /*   const causas = await db.execute(queryDirect);
+    return causas.map((r) => this.toLowercaseKeys(r)); */
   }
 
   // Obtener motivos de desviación asociados a un artículo / subcategoría y área
-  static async getDeviationsByArticle(codAs, codArt, codSubCat) {
+  static async getDeviationsByArticle(codAs, codSubCat) {
     let subCat = codSubCat ? String(codSubCat).trim() : null;
 
-    if (!subCat && codArt && codArt.trim() !== "") {
+    /* if (!subCat && codArt && codArt.trim() !== "") {
       const artCode = String(codArt).trim();
       const art1 = await db.execute(
         `SELECT SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :artCode`,
@@ -892,9 +891,9 @@ class InspectionModel {
           subCat = String(art2[0].COD_SUBCAT).trim();
         }
       }
-    }
+    } */
 
-    let whereClause = " WHERE rv.FLAG_ESTADO IN ('1', 'A') ";
+    /* let whereClause = " WHERE rv.FLAG_ESTADO IN ('1', 'A') ";
     const replacements = {};
 
     if (codAs && codAs.trim() !== "") {
@@ -905,21 +904,24 @@ class InspectionModel {
     if (subCat) {
       whereClause += " AND TRIM(pcd.COD_SUB_CAT) = :subCat ";
       replacements.subCat = subCat;
-    }
+    } */
 
     const query = `
-      SELECT DISTINCT 
+      SELECT  
              mp.COD_PREGUNTA, 
-             mp.DESCR as MOTIVO_DESVIACION
+             mp.DESCR as MOTIVO_DESVIACION,
+              rv.cod_rv
         FROM MAESTRO_PREGUNTAS mp
         JOIN PREGUNTAS_VERSIONADO pv ON mp.COD_PREGUNTA = pv.COD_PREGUNTA
         JOIN REPORTES_VERSIONADO rv ON pv.COD_RV = rv.COD_RV
         JOIN PLANTILLA_CAUSA_DESVIACION pcd ON rv.COD_REPORTE = pcd.COD_REPORTE
-       ${whereClause}
-       ORDER BY mp.DESCR
+        WHERE rv.FLAG_ESTADO IN ('1', 'A') 
+        AND pcd.COD_AS = :codAs
+        AND TRIM(pcd.COD_SUB_CAT) = :subCat
+         ORDER BY mp.DESCR
     `;
 
-    const rows = await db.execute(query, replacements);
+    const rows = await db.execute(query, { codAs: codAs, subCat: subCat });
     if (rows.length > 0) {
       return rows.map((r) => this.toLowercaseKeys(r));
     }
