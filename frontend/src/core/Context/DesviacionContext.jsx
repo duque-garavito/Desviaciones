@@ -54,6 +54,7 @@ export function DesviacionProvider({ children }) {
   const limpiarArticulo = () => {
     localStorage.removeItem("articuloSeleccionado");
     setArticuloSeleccionado(null);
+    limpiarMuestrasActuales();
   };
 
   const limpiarPlan = () => {

@@ -12,8 +12,12 @@ export default function SeleccionArticulo() {
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
   const { usuarioActual, turnoActual } = useAuth();
-  const { seleccionarArticulo, articuloSeleccionado, reporteGenerado } =
-    useDesviacion();
+  const {
+    seleccionarArticulo,
+    articuloSeleccionado,
+    reporteGenerado,
+    planSeleccionado,
+  } = useDesviacion();
 
   const buscarArticulos = async (termino) => {
     setCargando(true);
@@ -23,6 +27,8 @@ export default function SeleccionArticulo() {
         params.set("buscar", termino.trim());
       if (usuarioActual)
         params.set("cod_as", String(turnoActual.codArea).trim());
+      if (planSeleccionado)
+        params.set("cod_plan", String(planSeleccionado ?? "").trim());
 
       const peticion = await obtenerArticulos(params);
 

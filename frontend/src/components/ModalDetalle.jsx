@@ -44,6 +44,29 @@ function ModalDetalle({ id, isOpen, onClose }) {
     }
   };
 
+  // Obtener preguntas únicas
+  const preguntasUnicas = React.useMemo(() => {
+    if (!registrosGroup?.respuestas) return [];
+
+    return [
+      ...new Map(
+        registrosGroup.respuestas.map((r) => [r.cod_pregunta, r]),
+      ).values(),
+    ];
+  }, [registrosGroup]);
+
+  // Índice para acceder rápidamente a las respuestas
+  const respuestasMap = React.useMemo(() => {
+    if (!registrosGroup?.respuestas) return {};
+
+    const map = {};
+
+    registrosGroup.respuestas.forEach((r) => {
+      map[`${r.cod_pregunta}_${r.cod_art.trim()}`] = r.total_desviacion;
+    });
+
+    return map;
+  }, [registrosGroup]);
   if (!isOpen) return null;
 
   return (
@@ -117,7 +140,8 @@ function ModalDetalle({ id, isOpen, onClose }) {
                       <div className="detalle-info-item">
                         <label>Plan Diario</label>
                         <span style={{ fontWeight: "600", color: "#1e40af" }}>
-                          {baseReg.fecha_parte} ({baseReg.especie})
+                          {baseReg.parte_produccion} {baseReg.fecha_parte} (
+                          {baseReg.especie})
                         </span>
                       </div>
                     )}
@@ -415,7 +439,7 @@ function ModalDetalle({ id, isOpen, onClose }) {
                       })} */}
                       {registrosGroup.articulos.map((reg) => (
                         <th
-                          key={reg.id}
+                          key={reg.cod_art}
                           style={{
                             textAlign: "center",
                             padding: "9px 8px",
@@ -434,278 +458,22 @@ function ModalDetalle({ id, isOpen, onClose }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      // Recolectar lista consolidada y única de preguntas a través de todos los muestreos del reporte
-                      const preguntasMap = new Map();
-                      registrosGroup.respuestas.forEach((reg) => {
-                        (reg.respuestas || []).forEach((ans) => {
-                          if (
-                            ans.cod_pregunta &&
-                            !preguntasMap.has(ans.cod_pregunta)
-                          ) {
-                            preguntasMap.set(ans.cod_pregunta, ans);
-                          }
-                        });
-                      });
-                      const todasPregs = Array.from(preguntasMap.values());
-                      // Separar campos de texto (tipo V) de los de muestreo
-                      const camposTexto = todasPregs.filter(
-                        (p) => p.tipo_campo === "V",
-                      );
-                      const pregs = todasPregs.filter(
-                        (p) => p.tipo_campo !== "V",
-                      );
+                    {preguntasUnicas.map((pregunta) => (
+                      <tr key={pregunta.cod_pregunta}>
+                        <td>{pregunta.pregunta}</td>
 
-                      return (
-                        <>
-                          {/* Bloque de campos de recepción (tipo V) */}
-                          {camposTexto.length > 0 && (
-                            <tr>
-                              <td
-                                colSpan={registrosGroup.length + 1}
-                                style={{ padding: 0 }}
-                              >
-                                <div
-                                  style={{
-                                    background:
-                                      "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)",
-                                    border: "1.5px solid #bfdbfe",
-                                    borderRadius: "10px",
-                                    margin: "8px 4px",
-                                    padding: "14px 18px",
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: "20px",
-                                    alignItems: "flex-start",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontWeight: "700",
-                                      fontSize: "12px",
-                                      color: "#1e40af",
-                                      textTransform: "uppercase",
-                                      letterSpacing: "0.06em",
-                                      width: "100%",
-                                      marginBottom: "4px",
-                                    }}
-                                  >
-                                    📋 Datos de Recepción
-                                  </div>
-                                  {camposTexto.map((campo) => {
-                                    const val =
-                                      registrosGroup[0]?.respuestas?.find(
-                                        (r) =>
-                                          r.cod_pregunta === campo.cod_pregunta,
-                                      )?.resp_varchar;
-                                    return (
-                                      <div
-                                        key={campo.cod_pregunta}
-                                        style={{ minWidth: "150px" }}
-                                      >
-                                        <div
-                                          style={{
-                                            fontSize: "11px",
-                                            color: "#64748b",
-                                            fontWeight: "600",
-                                            textTransform: "uppercase",
-                                            letterSpacing: "0.05em",
-                                            marginBottom: "3px",
-                                          }}
-                                        >
-                                          {campo.pregunta}
-                                        </div>
-                                        <div
-                                          style={{
-                                            fontSize: "14px",
-                                            fontWeight: "700",
-                                            color: "#1e293b",
-                                          }}
-                                        >
-                                          {val || "—"}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Filas del muestreo */}
-                          {pregs.map((p, pIdx) => {
-                            const isMainRow = pIdx < 3;
-                            const isFirstDeviation = pIdx === 3;
-
-                            const getCellClass = (ans, regId) => {
-                              if (!ans) return "matriz-cell-val";
-                              let cls = "matriz-cell-val";
-                              if (ans.tipo_campo === "B") {
-                                const val = ans.resp_char?.trim().toUpperCase();
-                                if (val === "C" || val === "S")
-                                  cls += " conforme";
-                                if (val === "N") cls += " no-conforme";
-                              } else if (ans.tipo_campo === "N") {
-                                const val = parseFloat(ans.resp_number);
-                                if (!isNaN(val) && val >= 1 && pIdx >= 3) {
-                                  cls += " no-conforme";
-                                }
-                              }
-                              if (
-                                ans.resp_varchar &&
-                                ans.resp_varchar.includes("Causas:")
-                              ) {
-                                cls += " has-comment";
-                              }
-                              if (
-                                activeTooltip === `${regId}-${p.cod_pregunta}`
-                              ) {
-                                cls += " active-tooltip";
-                              }
-                              return cls;
-                            };
-
-                            const getCellContent = (ans) => {
-                              if (!ans) return "—";
-                              if (ans.tipo_campo === "B") {
-                                const val = ans.resp_char?.trim().toUpperCase();
-                                if (val === "C") return "Conforme";
-                                if (val === "S") return "Sí";
-                                if (val === "N") return "No Conforme";
-                                return val || "—";
-                              }
-                              if (ans.tipo_campo === "N") {
-                                const val =
-                                  ans.resp_number !== null &&
-                                  ans.resp_number !== undefined
-                                    ? ans.resp_number
-                                    : "—";
-                                if (
-                                  ans.resp_varchar &&
-                                  ans.resp_varchar.includes("Causas:")
-                                ) {
-                                  let causasText = ans.resp_varchar;
-                                  if (causasText.startsWith("Causas: "))
-                                    causasText = causasText.substring(8);
-                                  return (
-                                    <>
-                                      {val}
-                                      <span className="tooltip-content">
-                                        <strong>Desvíos registrados:</strong>
-                                        {causasText
-                                          .split(" | ")
-                                          .map((line, lIdx) => (
-                                            <div
-                                              key={lIdx}
-                                              style={{ marginBottom: "2px" }}
-                                            >
-                                              • {line}
-                                            </div>
-                                          ))}
-                                      </span>
-                                    </>
-                                  );
-                                }
-                                return val;
-                              }
-                              return ans.resp_varchar || "—";
-                            };
-
-                            if (isMainRow) {
-                              return (
-                                <tr key={p.cod_pregunta}>
-                                  <td
-                                    className="matriz-header-pregunta"
-                                    style={{
-                                      fontWeight: "600",
-                                      backgroundColor: "#f1f5f9",
-                                      color: "#334155",
-                                    }}
-                                  >
-                                    {p.pregunta}
-                                  </td>
-                                  {registrosGroup.map((reg) => {
-                                    const ans = reg.respuestas.find(
-                                      (r) => r.cod_pregunta === p.cod_pregunta,
-                                    );
-                                    const hasComment =
-                                      ans?.resp_varchar &&
-                                      ans.resp_varchar.includes("Causas:");
-                                    return (
-                                      <td
-                                        key={reg.id}
-                                        className={getCellClass(ans, reg.id)}
-                                        style={{
-                                          textAlign: "center",
-                                          cursor: hasComment
-                                            ? "pointer"
-                                            : "default",
-                                        }}
-                                        onClick={() => {
-                                          if (hasComment) {
-                                            const key = `${reg.id}-${p.cod_pregunta}`;
-                                            setActiveTooltip(
-                                              activeTooltip === key
-                                                ? null
-                                                : key,
-                                            );
-                                          }
-                                        }}
-                                      >
-                                        {getCellContent(ans)}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            }
-
-                            return (
-                              <tr key={p.cod_pregunta}>
-                                <td
-                                  style={{
-                                    fontWeight: "500",
-                                    color: "#475569",
-                                  }}
-                                >
-                                  {p.pregunta.replace(/^DESVIACIONES\s+/i, "")}
-                                </td>
-                                {registrosGroup.map((reg) => {
-                                  const ans = reg.respuestas.find(
-                                    (r) => r.cod_pregunta === p.cod_pregunta,
-                                  );
-                                  const hasComment =
-                                    ans?.resp_varchar &&
-                                    ans.resp_varchar.includes("Causas:");
-                                  return (
-                                    <td
-                                      key={reg.id}
-                                      className={getCellClass(ans, reg.id)}
-                                      style={{
-                                        textAlign: "center",
-                                        cursor: hasComment
-                                          ? "pointer"
-                                          : "default",
-                                      }}
-                                      onClick={() => {
-                                        if (hasComment) {
-                                          const key = `${reg.id}-${p.cod_pregunta}`;
-                                          setActiveTooltip(
-                                            activeTooltip === key ? null : key,
-                                          );
-                                        }
-                                      }}
-                                    >
-                                      {getCellContent(ans)}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </>
-                      );
-                    })()}
+                        {registrosGroup.articulos.map((art) => (
+                          <td
+                            key={`${pregunta.cod_pregunta}-${art.cod_art}`}
+                            style={{ textAlign: "center" }}
+                          >
+                            {respuestasMap[
+                              `${pregunta.cod_pregunta}_${art.cod_art.trim()}`
+                            ] ?? 0}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

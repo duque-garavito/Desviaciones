@@ -692,12 +692,13 @@ class InspectionModel {
   // 1. MP (Materia Prima): Solo para Recepción (RECE)
   // 2. PPTT (Producto Terminado): Para Empaque (EMPA)
   // 3. ARTICULO CONGELADO | PROCESO: Para todas las demás áreas de proceso
-  static async buscarArticulos(busqueda, subCat, codAs) {
+  static async buscarArticulos(busqueda, subCat, codAs, parte) {
     const areaNorm = (codAs || "").trim().toUpperCase();
     const txtBusqueda = (busqueda || "").trim();
     const replacements = {
       busqueda: txtBusqueda,
       codAs: (codAs || "").trim(),
+      parte: (parte || "").trim(),
     };
 
     let query = "";
@@ -705,7 +706,7 @@ class InspectionModel {
     if (areaNorm === "RECE" || areaNorm === "RECEPCION") {
       // --MP (Materia Prima)
       query = `
-        SELECT t.COD_ART,
+        SELECT distinct t.COD_ART,
                t.Desc_Art,
                t.DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
@@ -716,6 +717,7 @@ class InspectionModel {
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+          inner join parte_produccion p on es.especie=p.especie
          WHERE
            t.FLAG_ESTADO IN ('1', 'A')
            AND (
@@ -725,13 +727,14 @@ class InspectionModel {
            )
            and pc.cod_as = :codAs
            and t.cod_clase='21'
+              and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.Desc_Art
          FETCH FIRST 20 ROWS ONLY
       `;
     } else if (areaNorm === "EMPA" || areaNorm === "EMPAQUE") {
       // --PPTT (Producto Terminado, literal garavito.sql)
       query = `
-        SELECT t.COD_ART,
+        SELECT distinct t.COD_ART,
                t.Desc_Art,
                t.DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
@@ -742,6 +745,7 @@ class InspectionModel {
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+          inner join parte_produccion p on es.especie=p.especie
          WHERE
            t.FLAG_ESTADO IN ('1', 'A')
            AND (
@@ -751,13 +755,14 @@ class InspectionModel {
            )
            and pc.cod_as = :codAs
            and t.cod_clase='01'
+           and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.Desc_Art
          FETCH FIRST 20 ROWS ONLY
       `;
     } else {
       // --ARTICULO CONGELADO | PROCESO (literal garavito.sql)
       query = `
-        SELECT t.cod_art_cong,
+        SELECT distinct t.cod_art_cong,
                t.descr ,
                '' as DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
@@ -769,11 +774,13 @@ class InspectionModel {
           join articulo_categ t3 on t2.cat_art=t3.cat_art
           inner join tg_especies es on t3.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
+          inner join parte_produccion p on es.especie=p.especie
          WHERE (
                  UPPER(t.cod_art_cong)       LIKE '%'|| UPPER(trim(:busqueda)) ||'%'
               OR UPPER(t.descr)  LIKE  '%'||UPPER(:busqueda) ||'%'
             )
            and pc.cod_as = :codAs
+           and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.descr
          FETCH FIRST 20 ROWS ONLY
       `;

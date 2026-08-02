@@ -16,6 +16,7 @@ export default function Formulario({ articulo, codRepC }) {
     limpiarArticulo,
     muestrasActuales,
     asignarMuestras,
+    limpiarDatosInspeccion,
   } = useDesviacion();
   const { usuarioActual, turnoActual } = useAuth();
   // Separar preguntas tipo V (texto) de las numéricas/binarias
@@ -27,7 +28,7 @@ export default function Formulario({ articulo, codRepC }) {
   const [desviacionSeleccionada, setDesviacionSeleccionada] = useState(null);
   const [causaSeleccionada, setCausaSeleccionada] = useState(null);
 
-  const [muestrasGuardadas, setMuestrasGuardadas] = useState([]);
+  // const [muestrasGuardadas, setMuestrasGuardadas] = useState([]);
 
   const [desviacionesDisponibles, setDesviacionesDisponibles] = useState([]);
   const [cargandoDesviaciones, setCargandoDesviaciones] = useState(false);
@@ -249,7 +250,7 @@ export default function Formulario({ articulo, codRepC }) {
     limpiarArticulo();
   };
   const handleFinalizarReporte = () => {
-    if (muestrasGuardadas.length === 0) {
+    if (muestrasActuales.length === 0) {
       setMensaje({
         tipo: "error",
         texto: "Registre al menos una muestra antes de finalizar.",
@@ -608,7 +609,7 @@ export default function Formulario({ articulo, codRepC }) {
             <h3>Finalizar Reporte</h3>
             <p>
               ¿Desea finalizar el reporte para este artículo? Se registrarán{" "}
-              <strong>{muestrasGuardadas.length}</strong> muestras en total.
+              <strong>{muestrasActuales.length}</strong> muestras en total.
             </p>
             <div className="ins-modal-acciones">
               <button
@@ -619,7 +620,7 @@ export default function Formulario({ articulo, codRepC }) {
               </button>
               <button
                 className="ins-modal-yes"
-                onClick={ejecutarFinalizarReporte}
+                onClick={limpiarDatosInspeccion}
               >
                 Confirmar
               </button>

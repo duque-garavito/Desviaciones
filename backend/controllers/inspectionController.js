@@ -70,12 +70,13 @@ const update = async (req, res) => {
 };
 
 const buscarArticulos = async (req, res) => {
-  const { buscar, sub_cat, cod_as } = req.query;
+  const { buscar, sub_cat, cod_as, cod_plan } = req.query;
   try {
     const articulos = await InspectionModel.buscarArticulos(
       buscar || "",
       sub_cat || "",
       cod_as || "",
+      cod_plan || "",
     );
     res.json({ success: true, articulos });
   } catch (error) {
