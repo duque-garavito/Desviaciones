@@ -56,7 +56,8 @@ function ModalDetalle({ id, isOpen, onClose }) {
     const map = {};
 
     registrosGroup.respuestas.forEach((r) => {
-      map[`${r.cod_pregunta}_${r.cod_art.trim()}`] = r.total_desviacion;
+      map[`${r.cod_pregunta}_${r.cod_art.trim()}`] =
+        r.tipo_campo === "N" ? r.total_desviacion : r.resp_varchar;
     });
 
     return map;
@@ -453,13 +454,38 @@ function ModalDetalle({ id, isOpen, onClose }) {
                   </thead>
                   <tbody>
                     {preguntasUnicas.map((pregunta) => (
-                      <tr key={pregunta.cod_pregunta}>
+                      <tr
+                        key={pregunta.cod_pregunta}
+                        style={
+                          pregunta.tipo_campo === "N"
+                            ? {}
+                            : {
+                                textAlign: "left",
+                                padding: "9px 14px",
+                                fontWeight: "700",
+                                fontSize: "13px",
+                                color: "#000000",
+                                backgroundColor: "#f1f5f9",
+                              }
+                        }
+                      >
                         <td>{pregunta.pregunta}</td>
 
                         {registrosGroup.articulos.map((art) => (
                           <td
                             key={`${pregunta.cod_pregunta}-${art.cod_art}`}
-                            style={{ textAlign: "center" }}
+                            style={
+                              pregunta.tipo_campo === "N"
+                                ? { textAlign: "center" }
+                                : {
+                                    textAlign: "center",
+                                    padding: "9px 14px",
+                                    fontWeight: "700",
+                                    fontSize: "13px",
+                                    color: "#000000",
+                                    backgroundColor: "#f1f5f9",
+                                  }
+                            }
                           >
                             {respuestasMap[
                               `${pregunta.cod_pregunta}_${art.cod_art.trim()}`

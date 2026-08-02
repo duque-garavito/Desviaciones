@@ -290,47 +290,48 @@ t.cant_muestra
     const details = await db.execute(
       `
       SELECT
-    COALESCE(a1.cod_art, a2.cod_art_cong) AS cod_art,
-    COALESCE(a1.desc_art, a2.descr) AS desc_art,
-    rd.cod_pregunta,
-    mp.descr AS pregunta,
-    mp.tipo_campo,
-    SUM(
-        CASE
-            WHEN mp.tipo_campo = 'N'
-            THEN NVL(rd.resp_number,0)
-            ELSE 0
-        END
-    ) AS total_desviacion,
-    rd.resp_varchar
-FROM reporte_respuestas_desviacion_articulo ra
-LEFT JOIN articulo a1
-       ON ra.cod_art = a1.cod_art
-      AND TRIM(ra.tipo_art) IN ('MP','PPTT')
-LEFT JOIN articulo_conge a2
-       ON ra.cod_art = a2.cod_art_cong
-      AND TRIM(ra.tipo_art) = 'CONGE'
-JOIN reporte_respuestas_det rd
-     ON ra.cod_rep_c = rd.cod_rep_c
-    AND ra.item_rrda = rd.item_rrda
-JOIN maestro_preguntas mp
-     ON rd.cod_pregunta = mp.cod_pregunta
-WHERE rd.cod_rep_c = :codRepC
-  AND (
-        a1.cod_art IS NOT NULL
-     OR a2.cod_art_cong IS NOT NULL
-      )
-GROUP BY
-    COALESCE(a1.cod_art, a2.cod_art_cong),
-    COALESCE(a1.desc_art, a2.descr),
-    rd.cod_pregunta,
-    mp.descr,
-    mp.tipo_campo,
-    ra.item_rrda,
-    rd.resp_varchar
-ORDER BY
-    cod_art,
-    pregunta
+      COALESCE(a1.cod_art, a2.cod_art_cong) AS cod_art,
+      COALESCE(a1.desc_art, a2.descr) AS desc_art,
+      rd.cod_pregunta,
+      mp.descr AS pregunta,
+      mp.tipo_campo,
+      SUM(
+          CASE
+              WHEN mp.tipo_campo = 'N'
+              THEN NVL(rd.resp_number,0)
+              ELSE 0
+          END
+      ) AS total_desviacion,
+      rd.resp_varchar
+  FROM reporte_respuestas_desviacion_articulo ra
+  LEFT JOIN articulo a1
+        ON ra.cod_art = a1.cod_art
+        AND TRIM(ra.tipo_art) IN ('MP','PPTT')
+  LEFT JOIN articulo_conge a2
+        ON ra.cod_art = a2.cod_art_cong
+        AND TRIM(ra.tipo_art) = 'CONGE'
+  JOIN reporte_respuestas_det rd
+      ON ra.cod_rep_c = rd.cod_rep_c
+      AND ra.item_rrda = rd.item_rrda
+  JOIN maestro_preguntas mp
+      ON rd.cod_pregunta = mp.cod_pregunta
+  WHERE rd.cod_rep_c = :codRepC
+    AND (
+          a1.cod_art IS NOT NULL
+      OR a2.cod_art_cong IS NOT NULL
+        )
+  GROUP BY
+      COALESCE(a1.cod_art, a2.cod_art_cong),
+      COALESCE(a1.desc_art, a2.descr),
+      rd.cod_pregunta,
+      mp.descr,
+      mp.tipo_campo,
+      ra.item_rrda,
+      rd.resp_varchar
+  ORDER BY
+      cod_art,
+      tipo_campo desc,
+      pregunta
     `,
       { codRepC },
     );
