@@ -46,7 +46,7 @@ export default function Formulario() {
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
-  const [verGeneral, setVerGeneral] = useState(true);
+  const [verGeneral, setVerGeneral] = useState(!datosGenerales);
 
   const fase = !desviacionSeleccionada ? "desviaciones" : "causas";
 

@@ -76,11 +76,11 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
     }
   };
 
-  useEffect(() => {
+  {/* useEffect(() => {
     if (datosGenerales) {
      handleVerGeneral()
     }
-  }, [datosGenerales]);
+  }, [datosGenerales]); */}
 
   return (
     <div className="ins-pantalla-articulo">
