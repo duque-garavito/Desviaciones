@@ -62,7 +62,6 @@ export const obtenterDesviaciones = async (params) => {
 };
 
 export const obtenterCausas = async (subcat) => {
-  console.log(subcat);
   try {
     const res = await fetch(
       `${apiRoute}/causas-desviacion/?cod_sub_cat=${subcat}`,
@@ -123,5 +122,40 @@ export const SaveDesviacion = async (
       error: true,
       message: error.message,
     };
+  }
+};
+
+// Añadir en frontend/src/core/services/Desviacion.service.js
+export const obtenerBorradorActivo = async (codUsr) => {
+  try {
+    const res = await fetch(`${apiRoute}/borrador-activo/${codUsr}`);
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    return {
+      success: true,
+      draft: data.draft // Devolverá null si no tiene reportes incompletos hoy, o el objeto del reporte
+    };
+  } catch (error) {
+    console.error("Error al buscar borrador activo en BD:", error);
+    return { error: true, message: error.message };
+  }
+};
+
+export const guardarDatosGenerales = async (cod_rep_c, cod_usr, cod_art, tipo_art, respuestas) => {
+  try {
+    const res = await fetch(`${apiRoute}/guardar-datos-generales`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cod_rep_c, cod_usr, cod_art, tipo_art, respuestas }),
+    });
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message);
+    return { success: true, cod_rep_c: data.cod_rep_c };
+  } catch (error) {
+    console.error("Error guardando datos generales:", error);
+    return { error: true, message: error.message };
   }
 };

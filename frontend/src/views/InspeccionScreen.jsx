@@ -3,6 +3,7 @@ import SeleccionArticulo from "../components/Inpeccion/SeleccionArticulo";
 import { useDesviacion } from "../core/Context/DesviacionContext";
 import Formulario from "../components/Inpeccion/Formulario";
 
+
 export default function InspeccionScreen() {
   const { articuloSeleccionado, reporteGenerado, planSeleccionado } =
     useDesviacion();

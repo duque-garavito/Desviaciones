@@ -62,16 +62,23 @@ class UserModel {
     const dd = String(d.getDate()).padStart(2, "0");
     const todayStr = `${yyyy}-${mm}-${dd}`;
 
+    console.log("[getTodaySchedule] userId:", userId, "| todayStr:", todayStr);
+
     const results = await db.execute(
       `
-      SELECT CASE WHEN pd.TURNO = 'TD  ' THEN 'DIA' ELSE 'NOCHE' END as TURNO, a.DESCR as AREA_NOMBRE,a.cod_as,pd.cod_pro cod_programacion
+      SELECT CASE WHEN TRIM(pd.TURNO) = 'TD' THEN 'DIA' ELSE 'NOCHE' END as TURNO,
+             a.DESCR as AREA_NOMBRE,
+             a.cod_as,
+             pd.cod_pro cod_programacion
       FROM PROGRAMACION_CALIDAD_DET pd
       LEFT JOIN AREAS_SUPERVISION a ON pd.COD_AS = a.COD_AS
-      WHERE LOWER(TRIM(pd.COD_USR)) = LOWER(:userId) AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
+      WHERE LOWER(TRIM(pd.COD_USR)) = LOWER(TRIM(:userId))
+        AND TRUNC(pd.FEC_PROGRAM) = TO_DATE(:todayStr, 'YYYY-MM-DD')
     `,
       { userId: String(userId || "").trim(), todayStr },
     );
 
+    console.log("[getTodaySchedule] result:", results[0]);
     return results[0];
   }
 

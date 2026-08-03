@@ -4,10 +4,12 @@ import Layout from "../components/Layout";
 import { Calendar, Sun, Moon } from "lucide-react";
 import "../assets/css/Dashboard.css";
 import { useAuth } from "../core/Context/AuthContext";
+import { useDesviacion } from "../core/Context/DesviacionContext";
 import { ObtenerProgramacionPorUsuario } from "../core/services/Programacion.service";
 
 export default function DashboardView() {
   const { usuarioActual, logout } = useAuth();
+  const { limpiarDatosInspeccion } = useDesviacion();
   const navigate = useNavigate();
 
   const currentUser = usuarioActual || {
@@ -71,7 +73,10 @@ export default function DashboardView() {
                           key={idx}
                           className={isToday ? "clickable" : "disabled-row"}
                           onClick={() => {
-                            if (isToday) navigate("/inspecciones");
+                            if (isToday) {
+                              limpiarDatosInspeccion();
+                              navigate("/inspecciones");
+                            }
                           }}
                           style={{
                             cursor: isToday ? "pointer" : "not-allowed",

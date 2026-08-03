@@ -5,6 +5,7 @@ import "../../assets/css/Inspecciones.css";
 import { useAuth } from "../../core/Context/AuthContext";
 import { useDesviacion } from "../../core/Context/DesviacionContext";
 import { obtenerArticulos } from "../../core/services/Articulo.service";
+import { obtenerBorradorActivo } from "../../core/services/Desviacion.service";
 import MdlConfirmarInicio from "./MdlConfirmarInicio";
 
 export default function SeleccionArticulo() {
@@ -14,21 +15,29 @@ export default function SeleccionArticulo() {
   const { usuarioActual, turnoActual } = useAuth();
   const {
     seleccionarArticulo,
+    seleccionarReporte,
+    asignarDatosGenerales,
     articuloSeleccionado,
     reporteGenerado,
     planSeleccionado,
   } = useDesviacion();
 
+  // La selección de artículos inicia limpia y el estado se maneja por sesión y autoguardado en tiempo real
+
   const buscarArticulos = async (termino) => {
     setCargando(true);
     try {
       const params = new URLSearchParams();
+      console.log("[SeleccionArticulo] turnoActual:", turnoActual);
       if (termino && termino.trim().length >= 2)
         params.set("buscar", termino.trim());
-      if (usuarioActual)
+      if (usuarioActual && turnoActual?.codArea && turnoActual.codArea !== "NAN")
         params.set("cod_as", String(turnoActual.codArea).trim());
+      if (turnoActual?.areaAsignada)
+        params.set("area_nombre", String(turnoActual.areaAsignada).trim());
       if (planSeleccionado)
         params.set("cod_plan", String(planSeleccionado ?? "").trim());
+      console.log("[SeleccionArticulo] URL params:", params.toString());
 
       const peticion = await obtenerArticulos(params);
 
@@ -136,6 +145,7 @@ export default function SeleccionArticulo() {
               "";
             const descSubCat = art.desc_sub_cat || art.DESC_SUB_CAT || "";
             const descEtiqueta = art.desc_etiqueta || art.DESC_ETIQUETA || "";
+            const especie = art.especie || art.ESPECIE || "";
             return (
               <div
                 key={codArt || idx}
@@ -145,6 +155,11 @@ export default function SeleccionArticulo() {
                 <div className="ins-art-content">
                   <div className="ins-art-row-top">
                     <span className="ins-art-cod">{codArt}</span>
+                    {especie && (
+                      <span className="ins-art-especie-badge">
+                        {especie}
+                      </span>
+                    )}
                     {descSubCat && (
                       <span className="ins-art-subcat">{descSubCat}</span>
                     )}

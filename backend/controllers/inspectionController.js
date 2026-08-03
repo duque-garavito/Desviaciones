@@ -70,13 +70,15 @@ const update = async (req, res) => {
 };
 
 const buscarArticulos = async (req, res) => {
-  const { buscar, sub_cat, cod_as, cod_plan } = req.query;
+  const { buscar, sub_cat, cod_as, cod_plan, area_nombre } = req.query;
+  console.log("[buscarArticulos] params:", { buscar, cod_as, area_nombre, cod_plan });
   try {
     const articulos = await InspectionModel.buscarArticulos(
       buscar || "",
       sub_cat || "",
       cod_as || "",
       cod_plan || "",
+      area_nombre || "",
     );
     res.json({ success: true, articulos });
   } catch (error) {
@@ -191,6 +193,22 @@ const getPartesProduccion = async (req, res) => {
   }
 };
 
+const saveGeneralData = async (req, res) => {
+  const { cod_rep_c, cod_usr, cod_art, tipo_art, respuestas } = req.body;
+  try {
+    const result = await InspectionModel.saveGeneralData(
+      cod_rep_c,
+      cod_usr,
+      cod_art,
+      tipo_art,
+      respuestas,
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getMyForm,
   save,
@@ -203,4 +221,5 @@ module.exports = {
   getDeviationCauses,
   getDeviationsByArticle,
   getPartesProduccion,
+  saveGeneralData,
 };

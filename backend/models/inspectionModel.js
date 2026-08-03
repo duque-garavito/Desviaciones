@@ -176,7 +176,7 @@ class InspectionModel {
                :ls_COD_REP_C, :ls_COD_PREGUNTA, :ls_COD_RV, 
                :ls_RESP_BLOB, :ls_RESP_TIPO_BLOB, :ls_RESP_CHAR, 
                :ln_RESP_NUMBER, :ls_RESP_VARCHAR, :ls_COD_USR,
-               :ls_COD_ART, :ls_TIPO_ART
+               :ls_COD_ART, :ls_TIPO_ART, :ls_sub_cat, :ls_causa
              );
            END;`,
           {
@@ -194,6 +194,8 @@ class InspectionModel {
             ls_COD_USR: cod_usr,
             ls_COD_ART: nro_ref || "DEFAULT",
             ls_TIPO_ART: tipoRef,
+            ls_sub_cat: null,
+            ls_causa: null,
           },
         );
 
@@ -311,7 +313,21 @@ class InspectionModel {
         },
       );
 
-      const cod_rep_c = result.outBinds.ls_COD_REP_C;
+      let cod_rep_c = null;
+      if (result.outBinds) {
+        if (Array.isArray(result.outBinds)) {
+          cod_rep_c = result.outBinds[0];
+        } else {
+          cod_rep_c =
+            result.outBinds.ls_COD_REP_C ||
+            result.outBinds.LS_COD_REP_C ||
+            result.outBinds.cod_rep_c ||
+            Object.values(result.outBinds)[0];
+        }
+      }
+      if (Array.isArray(cod_rep_c)) {
+        cod_rep_c = cod_rep_c[0];
+      }
 
       // 1b. Si se ingresó Parte de Producción, actualizarlo en la cabecera creada
       /*  if (parte_produccion && String(parte_produccion).trim() !== "") {
@@ -434,7 +450,7 @@ class InspectionModel {
             ls_RESP_CHAR: respuesta.resp_char || null,
             ln_RESP_NUMBER:
               respuesta.resp_number !== undefined &&
-              respuesta.resp_number !== null
+                respuesta.resp_number !== null
                 ? Number(respuesta.resp_number)
                 : null,
             ls_RESP_VARCHAR: respuesta.resp_varchar || null,
@@ -489,6 +505,115 @@ class InspectionModel {
     }
   }
 
+  // Guardar datos generales (campos de texto: Cámara, Procedencia, Proveedor)
+  // Realiza inserción/actualización directa en REPORTE_RESPUESTAS_DET asociando el ITEM_RRDA correspondiente de Oracle
+  static async saveGeneralData(cod_rep_c_raw, cod_usr, cod_art, tipo_art, respuestas) {
+    const rawVal = Array.isArray(cod_rep_c_raw) ? cod_rep_c_raw[0] : cod_rep_c_raw;
+    let cod_rep_c =
+      typeof rawVal === "object" && rawVal !== null
+        ? rawVal.codigoReporte || rawVal.cod_rep_c || rawVal.COD_REP_C || rawVal.codigo || rawVal.id
+        : rawVal;
+
+    // Fallback 1: Buscar el borrador activo de hoy para el inspector
+    if ((!cod_rep_c || String(cod_rep_c).trim() === "" || cod_rep_c === "undefined" || cod_rep_c === "null") && cod_usr) {
+      try {
+        const borrador = await InspectionModel.getActiveDraftForToday(cod_usr);
+        if (borrador && borrador.cod_rep_c) {
+          cod_rep_c = borrador.cod_rep_c;
+        }
+      } catch (err) {
+        console.error("Error consultando borrador alternativo:", err);
+      }
+    }
+
+    // Fallback 2: Autogenerar la cabecera del reporte en Oracle si no existía ninguna en el cliente
+    if ((!cod_rep_c || String(cod_rep_c).trim() === "" || cod_rep_c === "undefined" || cod_rep_c === "null") && cod_usr) {
+      try {
+        const autoHeader = await InspectionModel.createHeader("RECE", cod_art || "", "", cod_usr, null);
+        if (autoHeader && autoHeader.cod_rep_c) {
+          cod_rep_c = autoHeader.cod_rep_c;
+        }
+      } catch (err) {
+        console.error("Error creando cabecera automática para datos generales:", err);
+      }
+    }
+
+    if (!cod_rep_c || String(cod_rep_c).trim() === "" || cod_rep_c === "undefined" || cod_rep_c === "null") {
+      throw new Error("Código de reporte no disponible (COD_REP_C es nulo).");
+    }
+
+    const conn = await db.getConnection();
+    try {
+      // 1. Obtener o garantizar el ITEM_RRDA de REPORTE_RESPUESTAS_DESVIACION_ARTICULO para este COD_REP_C
+      let item_rrda = 1;
+      const rrdaRes = await conn.execute(
+        `SELECT ITEM_RRDA 
+           FROM REPORTE_RESPUESTAS_DESVIACION_ARTICULO 
+          WHERE COD_REP_C = :cod_rep_c 
+          ORDER BY ITEM_RRDA ASC 
+          FETCH FIRST 1 ROWS ONLY`,
+        { cod_rep_c }
+      );
+
+      if (rrdaRes.rows && rrdaRes.rows.length > 0) {
+        const row = rrdaRes.rows[0];
+        item_rrda = row.ITEM_RRDA || row.item_rrda || Object.values(row)[0] || 1;
+      } else {
+        const artVal = (cod_art || "").trim() || "DEFAULT";
+        const tipoVal = (tipo_art || "MP").trim();
+        await conn.execute(
+          `INSERT INTO REPORTE_RESPUESTAS_DESVIACION_ARTICULO (COD_REP_C, ITEM_RRDA, COD_ART, TIPO_ART)
+           VALUES (:cod_rep_c, 1, :artVal, :tipoVal)`,
+          { cod_rep_c, artVal, tipoVal }
+        );
+        item_rrda = 1;
+      }
+
+      // 2. Insertar o actualizar la respuesta en REPORTE_RESPUESTAS_DET con (COD_REP_C, ITEM_RRDA, COD_PREGUNTA)
+      for (const r of respuestas) {
+        const updateRes = await conn.execute(
+          `UPDATE REPORTE_RESPUESTAS_DET
+              SET RESP_VARCHAR = :resp_varchar
+            WHERE COD_REP_C = :cod_rep_c 
+              AND ITEM_RRDA = :item_rrda 
+              AND COD_PREGUNTA = :cod_pregunta`,
+          {
+            resp_varchar: r.resp_varchar || null,
+            cod_rep_c,
+            item_rrda,
+            cod_pregunta: r.cod_pregunta,
+          },
+        );
+
+        if (updateRes.rowsAffected === 0) {
+          await conn.execute(
+            `INSERT INTO REPORTE_RESPUESTAS_DET (
+               COD_REP_C, ITEM_RRDA, COD_PREGUNTA, COD_RV, RESP_VARCHAR, COD_USR
+             ) VALUES (
+               :cod_rep_c, :item_rrda, :cod_pregunta, :cod_rv, :resp_varchar, :cod_usr
+             )`,
+            {
+              cod_rep_c,
+              item_rrda,
+              cod_pregunta: r.cod_pregunta,
+              cod_rv: r.cod_rv || null,
+              resp_varchar: r.resp_varchar || null,
+              cod_usr,
+            },
+          );
+        }
+      }
+
+      await conn.commit();
+      return { success: true, cod_rep_c };
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      if (conn) await conn.close();
+    }
+  }
+
   // Consultar en Oracle si el inspector tiene una inspección iniciada hoy
   static async getActiveDraftForToday(cod_usr) {
     const conn = await db.getConnection();
@@ -510,9 +635,9 @@ class InspectionModel {
       }
 
       const row = resHeader.rows[0];
-      const cod_rep_c = row[0];
-      const cod_rv = row[1];
-      const nro_ref = row[3];
+      const cod_rep_c = row.COD_REP_C || row.cod_rep_c || row[0];
+      const cod_rv = row.COD_RV || row.cod_rv || row[1];
+      const nro_ref = row.NRO_REF || row.nro_ref || row[3] || row[2];
 
       // Buscar detalles de respuestas en BD si existen
       const resDet = await conn.execute(
@@ -527,26 +652,52 @@ class InspectionModel {
 
       const respuestas = resDet.rows || [];
 
-      // Buscar info del artículo
-      let articulo = { COD_ART: nro_ref };
+      // Buscar el artículo real registrado en la relación de desviación de la cabecera
+      let cod_art_real = nro_ref;
+      let tipo_art_real = "MP";
+      const resArtRel = await conn.execute(
+        `SELECT TRIM(ra.COD_ART) as COD_ART, TRIM(ra.TIPO_ART) as TIPO_ART
+         FROM REPORTE_RESPUESTAS_DESVIACION_ARTICULO ra
+         WHERE ra.COD_REP_C = :cod_rep_c
+         FETCH FIRST 1 ROWS ONLY`,
+        { cod_rep_c },
+      );
+
+      if (resArtRel.rows && resArtRel.rows.length > 0) {
+        const rowArt = resArtRel.rows[0];
+        cod_art_real = rowArt.COD_ART || rowArt.cod_art || Object.values(rowArt)[0] || nro_ref;
+        tipo_art_real = rowArt.TIPO_ART || rowArt.tipo_art || Object.values(rowArt)[1] || "MP";
+      }
+
+      // Buscar información completa del artículo
+      let articulo = { COD_ART: cod_art_real, cod_art: cod_art_real, tipo_art: tipo_art_real };
       const artNormal = await conn.execute(
-        `SELECT TRIM(COD_ART) as COD_ART, NOM_ARTICULO FROM ARTICULO WHERE TRIM(COD_ART) = :nro_ref`,
-        { nro_ref },
+        `SELECT TRIM(COD_ART) as COD_ART, NOM_ARTICULO, SUB_CAT_ART FROM ARTICULO WHERE TRIM(COD_ART) = :cod_art_real`,
+        { cod_art_real },
       );
       if (artNormal.rows && artNormal.rows.length > 0) {
+        const a = artNormal.rows[0];
         articulo = {
-          COD_ART: artNormal.rows[0][0],
-          NOM_ARTICULO: artNormal.rows[0][1],
+          COD_ART: a.COD_ART || a.cod_art || cod_art_real,
+          cod_art: a.COD_ART || a.cod_art || cod_art_real,
+          NOM_ARTICULO: a.NOM_ARTICULO || a.nom_articulo,
+          nom_articulo: a.NOM_ARTICULO || a.nom_articulo,
+          tipo_art: tipo_art_real,
+          sub_cat_art: a.SUB_CAT_ART || a.sub_cat_art,
         };
       } else {
         const artConge = await conn.execute(
-          `SELECT TRIM(COD_ART_CONG) as COD_ART, DESCR as NOM_ARTICULO FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :nro_ref`,
-          { nro_ref },
+          `SELECT TRIM(COD_ART_CONG) as COD_ART, DESCR as NOM_ARTICULO FROM ARTICULO_CONGE WHERE TRIM(COD_ART_CONG) = :cod_art_real`,
+          { cod_art_real },
         );
         if (artConge.rows && artConge.rows.length > 0) {
+          const a = artConge.rows[0];
           articulo = {
-            COD_ART: artConge.rows[0][0],
-            NOM_ARTICULO: artConge.rows[0][1],
+            COD_ART: a.COD_ART || a.cod_art || cod_art_real,
+            cod_art: a.COD_ART || a.cod_art || cod_art_real,
+            NOM_ARTICULO: a.NOM_ARTICULO || a.nom_articulo,
+            nom_articulo: a.NOM_ARTICULO || a.nom_articulo,
+            tipo_art: tipo_art_real || "CONG",
           };
         }
       }
@@ -564,20 +715,21 @@ class InspectionModel {
 
       return {
         cod_rep_c,
+        codigoReporte: cod_rep_c,
         cod_rv,
         articulo,
         respuestas: respuestas.map((r) => ({
-          item: r[0],
-          cod_pregunta: r[1],
-          resp_char: r[2],
-          resp_number: r[3],
-          resp_varchar: r[4],
+          item: r.ITEM || r.item || r[0],
+          cod_pregunta: r.COD_PREGUNTA || r.cod_pregunta || r[1],
+          resp_char: r.RESP_CHAR || r.resp_char || r[2],
+          resp_number: r.RESP_NUMBER || r.resp_number || r[3],
+          resp_varchar: r.RESP_VARCHAR || r.resp_varchar || r[4],
         })),
         causas: (resCausas.rows || []).map((c) => ({
-          item: c[0],
-          cod_mcd: c[1],
-          descr_causa: c[2],
-          cod_sub_cat: c[3],
+          item: c.ITEM || c.item || c[0],
+          cod_mcd: c.COD_MCD || c.cod_mcd || c[1],
+          descr_causa: c.DESCR_CAUSA || c.descr_causa || c[2],
+          cod_sub_cat: c.COD_SUB_CAT || c.cod_sub_cat || c[3],
         })),
       };
     } catch (error) {
@@ -691,20 +843,45 @@ class InspectionModel {
   // Buscar artículos utilizando exactamente las consultas literales del archivo garavito.sql:
   // 1. MP (Materia Prima): Solo para Recepción (RECE)
   // 2. PPTT (Producto Terminado): Para Empaque (EMPA)
-  // 3. ARTICULO CONGELADO | PROCESO: Para todas las demás áreas de proceso
-  static async buscarArticulos(busqueda, subCat, codAs, parte) {
-    const areaNorm = (codAs || "").trim().toUpperCase();
+  // 3. ARTICULO CONGELADO | PROCESO: Para todas las demás áreas
+  static async buscarArticulos(busqueda, subCat, codAs, parte, areaNombre) {
     const txtBusqueda = (busqueda || "").trim();
-    const replacements = {
-      busqueda: txtBusqueda,
-      codAs: (codAs || "").trim(),
-      parte: (parte || "").trim(),
-    };
+    const targetCodAs = (codAs && codAs !== "NAN") ? String(codAs).trim() : null;
+
+    // 1. Determinar el tipo de área consultando AREAS_SUPERVISION
+    //    para no depender de lo que venga del frontend (puede estar desactualizado).
+    let areaDescrFromDB = (areaNombre || "").trim().toUpperCase();
+
+    if (targetCodAs) {
+      try {
+        const areaRows = await db.execute(
+          `SELECT TRIM(UPPER(DESCR)) as DESCR FROM AREAS_SUPERVISION WHERE TRIM(UPPER(COD_AS)) = TRIM(UPPER(:codAs))`,
+          { codAs: targetCodAs },
+        );
+        if (areaRows && areaRows.length > 0 && areaRows[0].DESCR) {
+          areaDescrFromDB = String(areaRows[0].DESCR).trim().toUpperCase();
+        }
+      } catch (e) {
+        console.warn("[buscarArticulos] No se pudo consultar AREAS_SUPERVISION:", e.message);
+      }
+    }
+
+    const isRecepcion =
+      areaDescrFromDB.includes("RECEP") ||
+      areaDescrFromDB.includes("RECE") ||
+      areaDescrFromDB === "MP";
+    const isEmpaque =
+      areaDescrFromDB.includes("EMPAQ") ||
+      areaDescrFromDB.includes("EMPA") ||
+      areaDescrFromDB === "PPTT";
+
+    console.log("[buscarArticulos] cod_as:", targetCodAs, "| areaDescr:", areaDescrFromDB, "| isRecepcion:", isRecepcion, "| isEmpaque:", isEmpaque);
 
     let query = "";
+    const sqlCodAs = targetCodAs || "FILE";
 
-    if (areaNorm === "RECE" || areaNorm === "RECEPCION") {
-      // --MP (Materia Prima)
+    if (isRecepcion) {
+      // --MP (Materia Prima): solo Recepción, cod_clase='21' (garavito.sql)
       query = `
         SELECT distinct t.COD_ART,
                t.Desc_Art,
@@ -717,7 +894,6 @@ class InspectionModel {
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
-          inner join parte_produccion p on es.especie=p.especie
          WHERE
            t.FLAG_ESTADO IN ('1', 'A')
            AND (
@@ -727,12 +903,11 @@ class InspectionModel {
            )
            and pc.cod_as = :codAs
            and t.cod_clase='21'
-              and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.Desc_Art
          FETCH FIRST 20 ROWS ONLY
       `;
-    } else if (areaNorm === "EMPA" || areaNorm === "EMPAQUE") {
-      // --PPTT (Producto Terminado, literal garavito.sql)
+    } else if (isEmpaque) {
+      // --PPTT (Producto Terminado): solo Empaque, cod_clase='01' (garavito.sql)
       query = `
         SELECT distinct t.COD_ART,
                t.Desc_Art,
@@ -745,7 +920,6 @@ class InspectionModel {
           JOIN ARTICULO_SUB_CATEG t2 ON t.SUB_CAT_ART = t2.COD_SUB_CAT
           inner join tg_especies es on t2.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
-          inner join parte_produccion p on es.especie=p.especie
          WHERE
            t.FLAG_ESTADO IN ('1', 'A')
            AND (
@@ -755,12 +929,11 @@ class InspectionModel {
            )
            and pc.cod_as = :codAs
            and t.cod_clase='01'
-           and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.Desc_Art
          FETCH FIRST 20 ROWS ONLY
       `;
     } else {
-      // --ARTICULO CONGELADO | PROCESO (literal garavito.sql)
+      // --ARTICULO CONGELADO | PROCESO: todas las demás áreas (garavito.sql)
       query = `
         SELECT distinct t.cod_art_cong,
                t.descr ,
@@ -774,19 +947,20 @@ class InspectionModel {
           join articulo_categ t3 on t2.cat_art=t3.cat_art
           inner join tg_especies es on t3.cat_art=es.cat_art
           inner join plantilla_causa_desviacion pc on t2.cod_sub_cat=pc.cod_sub_cat
-          inner join parte_produccion p on es.especie=p.especie
          WHERE (
                  UPPER(t.cod_art_cong)       LIKE '%'|| UPPER(trim(:busqueda)) ||'%'
               OR UPPER(t.descr)  LIKE  '%'||UPPER(:busqueda) ||'%'
-            )
+             )
            and pc.cod_as = :codAs
-           and p.cod_parte_producc LIKE '%' || :parte || '%'
          ORDER BY t.descr
          FETCH FIRST 20 ROWS ONLY
       `;
     }
 
-    const rows = await db.execute(query, replacements);
+    const rows = await db.execute(query, {
+      busqueda: txtBusqueda,
+      codAs: sqlCodAs,
+    });
     return rows.map((r) => {
       const low = this.toLowercaseKeys(r);
       low.cod_art = low.cod_art || r.COD_ART || r.COD_ART_CONG || "";

@@ -46,7 +46,7 @@ export default function Formulario() {
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
-  const [verGeneral, setVerGeneral] = useState(true);
+  const [verGeneral, setVerGeneral] = useState(!(datosGenerales && datosGenerales.length > 0));
 
   const fase = !desviacionSeleccionada ? "desviaciones" : "causas";
 
@@ -72,13 +72,22 @@ export default function Formulario() {
       sinDefecto: desviacionSeleccionada?.cod_pregunta ? true : false,
     };
 
+    const codReporteReal =
+      typeof reporteGenerado === "string"
+        ? reporteGenerado
+        : reporteGenerado?.codigoReporte ||
+          reporteGenerado?.cod_rep_c ||
+          reporteGenerado?.COD_REP_C ||
+          reporteGenerado?.codigo ||
+          reporteGenerado?.id;
+
     const peticion = await SaveDesviacion(
-      reporteGenerado.codigoReporte,
+      codReporteReal,
       desviacionSeleccionada?.cod_rv ?? null,
-      usuarioActual.usuario,
-      articuloSeleccionado.cod_art,
-      articuloSeleccionado.sub_cat_art,
-      articuloSeleccionado.tipo_art,
+      usuarioActual?.usuario || usuarioActual?.COD_USR,
+      articuloSeleccionado?.cod_art || articuloSeleccionado?.COD_ART,
+      articuloSeleccionado?.sub_cat_art || articuloSeleccionado?.SUB_CAT_ART,
+      articuloSeleccionado?.tipo_art || articuloSeleccionado?.TIPO_ART || "MP",
       causaSeleccionada?.cod_mcd ?? null,
       [
         {
@@ -110,7 +119,7 @@ export default function Formulario() {
   };
 
   const handleCambiarArticulo = () => {
-    limpiarArticulo();
+    limpiarDatosInspeccion();
   };
   const handleFinalizarReporte = () => {
     if (muestrasActuales.length === 0) {
@@ -203,7 +212,8 @@ export default function Formulario() {
           Finalizar Muestreo
         </button>
         <div className="ins-articulo-nombre">
-          {articuloSeleccionado?.cod_art} - {articuloSeleccionado?.desc_art}
+          {articuloSeleccionado?.cod_art || articuloSeleccionado?.COD_ART} - {" "}
+          {articuloSeleccionado?.desc_art || articuloSeleccionado?.nom_articulo || articuloSeleccionado?.NOM_ARTICULO || "Sin descripción"}
         </div>
         <button className="ins-btn-cambiar" onClick={handleCambiarArticulo}>
           Cambiar Artículo
@@ -253,11 +263,6 @@ export default function Formulario() {
               </span>
             )}
 
-            {datosGenerales && !verGeneral && (
-              <button className="ins-btn-cambiar" onClick={handleVerGeneral}>
-                Ver Datos Generales
-              </button>
-            )}
           </div>
 
           <div className="ins-categorias-area">

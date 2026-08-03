@@ -14,5 +14,6 @@ router.get('/articulos', inspectionController.buscarArticulos);
 router.get('/causas-desviacion', inspectionController.getDeviationCauses);
 router.get('/desviaciones-articulo', inspectionController.getDeviationsByArticle);
 router.get('/partes-produccion', inspectionController.getPartesProduccion);
+router.post('/guardar-datos-generales', inspectionController.saveGeneralData);
 
 module.exports = router;

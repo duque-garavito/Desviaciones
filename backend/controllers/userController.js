@@ -27,6 +27,8 @@ const login = async (req, res) => {
 
       let areaAsignada = "Sin asignar";
       let turno = "Día";
+      let codArea = "NAN";
+      let codProgramacion = "NAN";
 
       if (perfilNorm === "SUP_CALI") {
         const prog = await UserModel.getTodaySchedule(user.COD_USR);

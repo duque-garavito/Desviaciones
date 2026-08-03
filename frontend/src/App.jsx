@@ -20,7 +20,13 @@ function RutaProtegida() {
 
   if (loading) return null;
 
-  return autenticado ? <Layout /> : <Navigate to="/login" replace />;
+  return autenticado ? (
+    <DesviacionProvider>
+      <Layout />
+    </DesviacionProvider>
+  ) : (
+    <Navigate to="/login" replace />
+  );
 }
 
 function App() {
@@ -51,14 +57,7 @@ function App() {
 
         <Route element={<RutaProtegida />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route
-            path="/inspecciones"
-            element={
-              <DesviacionProvider>
-                <InspeccionScreen />
-              </DesviacionProvider>
-            }
-          />
+          <Route path="/inspecciones" element={<InspeccionScreen />} />
           <Route path="/registros" element={<RegistrosView />} />
         </Route>
 

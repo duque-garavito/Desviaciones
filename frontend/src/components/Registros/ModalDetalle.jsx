@@ -222,9 +222,9 @@ function ModalDetalle({ id, isOpen, onClose }) {
                         Cantidad Muestreada
                       </th>
 
-                      {registrosGroup.articulos.map((reg) => (
+                      {registrosGroup.articulos.map((reg, idx) => (
                         <th
-                          key={reg.id}
+                          key={reg.cod_art || reg.id || idx}
                           style={{
                             textAlign: "center",
                             padding: "9px 8px",

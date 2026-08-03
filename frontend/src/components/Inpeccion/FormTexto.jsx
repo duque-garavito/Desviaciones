@@ -1,30 +1,32 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Save } from "lucide-react";
 import { useDesviacion } from "../../core/Context/DesviacionContext";
-import { SaveDesviacion } from "../../core/services/Desviacion.service";
+import { guardarDatosGenerales } from "../../core/services/Desviacion.service";
 import { useAuth } from "../../core/Context/AuthContext";
 
 export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
-  const valoresIniciales = useMemo(
-    () =>
-      preguntasTexto.reduce((acc, p) => {
-        acc[p.cod_pregunta] = "";
-        return acc;
-      }, {}),
-    [preguntasTexto],
-  );
-
   const { usuarioActual } = useAuth();
 
   const {
     reporteGenerado,
     articuloSeleccionado,
+    seleccionarReporte,
     asignarDatosGenerales,
     datosGenerales,
     limpiarDatosInspeccion,
   } = useDesviacion();
 
-  const modo = useRef(datosGenerales ? "show" : "edit");
+  const yaGuardado = datosGenerales && datosGenerales.length > 0;
+
+  const valoresIniciales = useMemo(
+    () =>
+      preguntasTexto.reduce((acc, p) => {
+        const previo = datosGenerales?.find((x) => x.cod_pregunta === p.cod_pregunta)?.resp_varchar;
+        acc[p.cod_pregunta] = previo || "";
+        return acc;
+      }, {}),
+    [preguntasTexto, datosGenerales],
+  );
 
   const [valores, setValores] = useState(valoresIniciales);
   const [focusedId, setFocusedId] = useState(null);
@@ -43,36 +45,54 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
     const vacio = preguntasTexto.find((p) => !valores[p.cod_pregunta]?.trim());
 
     if (vacio) {
-      setError(`Complete el campo: ${vacio.texto}`);
+      setError(`Complete el campo: ${vacio.motivo_desviacion || "requerido"}`);
       return;
     }
 
     setError("");
-
-    const respuestas = preguntasTexto.map((p) => ({
-      cod_pregunta: p.cod_pregunta,
-      resp_varchar: valores[p.cod_pregunta],
-    }));
 
     const infoGeneral = preguntasTexto.map((p) => ({
       ...p,
       resp_varchar: valores[p.cod_pregunta],
     }));
 
-    const peticion = await SaveDesviacion(
-      reporteGenerado.codigoReporte,
-      null,
-      usuarioActual.usuario,
-      articuloSeleccionado.cod_art,
-      articuloSeleccionado.sub_cat_art,
-      articuloSeleccionado.tipo_art,
-      null,
-      respuestas,
+    // Guardar en Oracle en tiempo real
+    const rawCod =
+      typeof reporteGenerado === "string"
+        ? reporteGenerado
+        : reporteGenerado?.codigoReporte ||
+          reporteGenerado?.cod_rep_c ||
+          reporteGenerado?.COD_REP_C ||
+          reporteGenerado?.codigo ||
+          reporteGenerado?.id;
+
+    const codReporteReal = Array.isArray(rawCod) ? rawCod[0] : rawCod;
+
+    const peticion = await guardarDatosGenerales(
+      codReporteReal,
+      usuarioActual?.usuario || usuarioActual?.COD_USR,
+      articuloSeleccionado?.cod_art || articuloSeleccionado?.COD_ART,
+      articuloSeleccionado?.tipo_art || articuloSeleccionado?.TIPO_ART || "MP",
+      infoGeneral.map((p) => ({
+        cod_pregunta: p.cod_pregunta,
+        cod_rv: p.cod_rv || null,
+        resp_varchar: p.resp_varchar,
+      })),
     );
 
     if (peticion.success) {
+      if (peticion.cod_rep_c) {
+        seleccionarReporte({
+          codigoReporte: peticion.cod_rep_c,
+          cod_rep_c: peticion.cod_rep_c,
+          COD_REP_C: peticion.cod_rep_c,
+          codigo: peticion.cod_rep_c,
+        });
+      }
       asignarDatosGenerales(infoGeneral);
       handleVerGeneral();
+    } else {
+      setError(`Error al registrar: ${peticion.message || "Verifique conexión"}`);
     }
   };
 
@@ -113,7 +133,6 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
           const id = p.cod_pregunta;
           const isFocused = focusedId === id;
           const hasValue = Boolean(valores[id]?.trim());
-          console.log(datosGenerales);
 
           return (
             <div key={id}>
@@ -135,14 +154,7 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
 
               <input
                 type="text"
-                value={
-                  modo.current === "show"
-                    ? datosGenerales.find(
-                        (x) => x.cod_pregunta === p.cod_pregunta,
-                      )?.resp_varchar
-                    : valores[id]
-                }
-                readOnly={modo.current === "show"}
+                value={valores[id] || ""}
                 placeholder={`Ingrese ${p.motivo_desviacion.toLowerCase()}...`}
                 onChange={(e) => handleChange(id, e.target.value)}
                 onFocus={() => setFocusedId(id)}
@@ -151,13 +163,12 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
                   width: "100%",
                   padding: "13px 16px",
                   borderRadius: 12,
-                  border: `2px solid ${
-                    isFocused
+                  border: `2px solid ${isFocused
                       ? "#3b82f6"
                       : hasValue
                         ? "#93c5fd"
                         : "var(--border-color,#e2e8f0)"
-                  }`,
+                    }`,
                   background:
                     isFocused || hasValue ? "#eff6ff" : "var(--surface)",
                   color: "var(--text-primary)",
@@ -195,30 +206,26 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
           style={{
             display: "flex",
             gap: 12,
-            marginTop: 8,
+            marginTop: 15,
           }}
         >
           <button
             className="ins-modal-no"
-            style={{ flex: 1, padding: 13 }}
-            onClick={
-              modo.current === "show"
-                ? handleVerGeneral
-                : limpiarDatosInspeccion
-            }
+            style={{ flex: 1, padding: 14 }}
+            onClick={limpiarDatosInspeccion}
           >
-            ← Volver
+            ← Cancelar
           </button>
 
-          {modo.current === "edit" && (
-            <button
-              className="ins-modal-yes"
-              style={{ flex: 2, padding: 13, fontSize: 15 }}
-              onClick={handleConfirmar}
-            >
-              Guardar Informacion
-            </button>
-          )}
+          <button
+            className="ins-modal-yes"
+            style={{ flex: 2, padding: 14, fontSize: 16, fontWeight: "bold" }}
+            onClick={() => {
+              handleConfirmar();
+            }}
+          >
+            Continuar ➔
+          </button>
         </div>
       </div>
     </div>

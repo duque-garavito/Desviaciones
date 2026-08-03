@@ -65,6 +65,9 @@ export default function MdlConfirmarInicio() {
 
     seleccionarReporte({
       codigoReporte: peticion.codigo,
+      cod_rep_c: peticion.codigo,
+      COD_REP_C: peticion.codigo,
+      codigo: peticion.codigo,
     });
   };
 
