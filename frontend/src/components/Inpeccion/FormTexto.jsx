@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Save } from "lucide-react";
 import { useDesviacion } from "../../core/Context/DesviacionContext";
 import { SaveDesviacion } from "../../core/services/Desviacion.service";
@@ -75,6 +75,12 @@ export default function FormTexto({ preguntasTexto, handleVerGeneral }) {
       handleVerGeneral();
     }
   };
+
+  useEffect(() => {
+    if (datosGenerales) {
+     handleVerGeneral()
+    }
+  }, [datosGenerales]);
 
   return (
     <div className="ins-pantalla-articulo">

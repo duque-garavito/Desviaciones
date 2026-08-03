@@ -17,7 +17,7 @@ export function DesviacionProvider({ children }) {
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
   const [reporteGenerado, setReporteGenerado] = useState(null);
   const [muestrasActuales, setMuestrasActuales] = useState([]);
-  const [datosGenerales, setDatosGenerales] = useState([]);
+  const [datosGenerales, setDatosGenerales] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const seleccionarArticulo = (articulo) => {
@@ -46,7 +46,7 @@ export function DesviacionProvider({ children }) {
 
   const limpiarDatosGenerales = () => {
     localStorage.removeItem("datosGenerales");
-    setDatosGenerales([]);
+    setDatosGenerales(null);
   };
 
   const limpiarMuestrasActuales = () => {

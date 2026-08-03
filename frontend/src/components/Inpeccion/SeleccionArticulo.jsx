@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import logoApk from "../../assets/images/logo apk desviaciones.png";
 import { Search, Loader2, Package, ChevronRight } from "lucide-react";
 import "../../assets/css/Inspecciones.css";
