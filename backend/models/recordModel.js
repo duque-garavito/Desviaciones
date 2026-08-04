@@ -267,7 +267,7 @@ SUM(
           AND TRIM(t.tipo_art) IN ('MP', 'PPTT')
         LEFT JOIN ARTICULO_CONGE t3
             ON t.cod_art = t3.cod_art_cong
-          AND TRIM(t.tipo_art) = 'CONGE'
+          AND TRIM(t.tipo_art) = 'CONG'
         WHERE t.cod_rep_c = :codRepC
           AND (
                 t2.cod_art IS NOT NULL
