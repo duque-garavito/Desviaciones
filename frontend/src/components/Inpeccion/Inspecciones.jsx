@@ -801,11 +801,12 @@ function PantallaFormulario({
       )}
 
       <div className="ins-form-header">
-        <img
+        {/* <img
           src={logoApk}
           alt="Desviaciones"
           style={{ height: "42px", width: "auto", objectFit: "contain" }}
-        />
+        /> */}
+        <div className="ins-header-icon-badge"> <Package size={22} /> </div>
         <button
           className="ins-btn-finalizar"
           onClick={handleFinalizarReporte}

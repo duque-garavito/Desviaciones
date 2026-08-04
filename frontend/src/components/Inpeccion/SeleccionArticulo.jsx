@@ -69,11 +69,12 @@ export default function SeleccionArticulo() {
       {/* Encabezado elegante */}
       <div className="ins-articulo-header">
         <div className="ins-header-info">
-          <img
+          {/* <img
             src={logoApk}
             alt="Logo Desviaciones"
             style={{ height: "48px", width: "auto", objectFit: "contain" }}
-          />
+          /> */}
+          <div className="ins-header-icon-badge"> <Package size={22} /> </div>
           <div>
             <h2 className="ins-header-title">Selección de Artículo</h2>
           </div>

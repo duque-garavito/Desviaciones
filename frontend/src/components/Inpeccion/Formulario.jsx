@@ -188,11 +188,12 @@ export default function Formulario() {
   return (
     <div className="ins-formulario-container">
       <div className="ins-form-header">
-        <img
+        {/* <img
           src={logoApk}
           alt="Desviaciones"
           style={{ height: "42px", width: "auto", objectFit: "contain" }}
-        />
+        /> */}
+        
         <button
           className="ins-btn-finalizar"
           onClick={handleFinalizarReporte}

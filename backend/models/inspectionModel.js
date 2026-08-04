@@ -961,8 +961,10 @@ order by t3.descr, t2.descr
     try {
       const rows = await db.execute(
         `
-        select t.cod_parte_producc,to_char(t.fecha_part,'dd/mm/yyyy') fecha,t2.descr_especie from parte_produccion t, tg_especies t2
-where t.especie=t2.especie and t.flag_estado=1 and trim(t.especie)=:especie
+        select t.cod_parte_producc, to_char(t.fecha_part,'dd/mm/yyyy') fecha, t2.descr_especie 
+        from parte_produccion t, tg_especies t2
+        where t.especie=t2.especie and t.flag_estado=1 and trim(t.especie)=:especie
+        order by t.fecha_part desc
       `,
         { especie },
       );
