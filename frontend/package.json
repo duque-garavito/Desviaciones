@@ -1,12 +1,14 @@
 {
   "name": "desviaciones-frontend",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite --host --port 5007",
     "build": "vite build",
     "deploy:tablet": "vite build && npx cap sync android && adb reverse tcp:3002 tcp:3002 && cd android && gradlew.bat installDebug && adb shell am start -n com.fisholg.desviaciones/com.fisholg.desviaciones.MainActivity",
+    "build:release": "vite build && npx cap sync android && cd android && gradlew.bat assembleRelease",
+    "release:apk": "node scripts/release-apk.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

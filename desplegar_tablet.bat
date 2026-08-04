@@ -1,5 +1,5 @@
 @echo off
-title Compilando e Instalando en Tablet
+title Compilando, Publicando e Instalando en Tablet
 
 echo =======================================================
 echo COMPILANDO E INSTALANDO EN TABLET LENOVO
@@ -29,17 +29,30 @@ echo [3/5] Configurando puente USB ADB (Puerto 3002)...
 call adb reverse tcp:3002 tcp:3002
 
 echo.
-echo [4/5] Compilando e Instalando APK en Tablet...
+echo [4/5] Compilando APK release firmado y publicandolo al backend...
+echo       (al terminar sube solo la version para el proximo build)
 cd android
-call gradlew.bat installDebug
+call gradlew.bat assembleRelease
 if %errorlevel% neq 0 (
-    echo Error al compilar o instalar en la tablet. Abortando.
+    echo Error al compilar el APK release. Abortando.
     pause
     exit /b %errorlevel%
 )
 
 echo.
-echo [5/5] Iniciando aplicacion en la pantalla de la Tablet...
+echo [5/5] Instalando en la Tablet e iniciando la aplicacion...
+REM -r reinstala conservando los datos. Si falla por firma distinta, hay que
+REM desinstalar la version anterior de la tablet una unica vez:
+REM     adb uninstall com.fisholg.desviaciones
+call adb install -r "app\build\outputs\apk\release\app-release.apk"
+if %errorlevel% neq 0 (
+    echo.
+    echo No se pudo instalar en la tablet.
+    echo Si el error menciona la firma, ejecuta:  adb uninstall com.fisholg.desviaciones
+    pause
+    exit /b %errorlevel%
+)
+
 call adb shell am start -n com.fisholg.desviaciones/com.fisholg.desviaciones.MainActivity
 
 echo.

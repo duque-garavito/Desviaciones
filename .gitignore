@@ -6,6 +6,7 @@ jspm_packages/
 frontend/dist/
 frontend/android/app/build/
 frontend/android/.gradle/
+backend/updates/*.apk
 
 # Environment and local configs
 .env
@@ -30,3 +31,29 @@ yarn-error.log*
 *.sln
 *.sw?
 .DS_Store
+
+
+
+# Archivos de release
+release/
+
+# Archivos de updates
+backend/updates/
+
+# Comprimidos
+*.zip
+*.rar
+*.7z
+
+#CLAUDE
+.claude/
+
+#TEMPORALES
+*.tmp
+*.temp
+
+#MARKDOWN
+*.md
+
+#TEXTO
+*.txt

@@ -1,4 +1,3 @@
-import React from "react";
 import {
   HashRouter as Router,
   Routes,
@@ -10,6 +9,7 @@ import Login from "./views/LoginScreen";
 import Dashboard from "./views/DashboardView";
 import InspeccionScreen from "./views/InspeccionScreen";
 import Layout from "./components/Layout"; // <-- Nuevo
+import UpdateModal from "./components/UpdateModal";
 import { DesviacionProvider } from "./core/Context/DesviacionContext";
 
 import { useAuth } from "./core/Context/AuthContext";
@@ -30,6 +30,9 @@ function App() {
 
   return (
     <Router>
+      {/* MODAL DE ACTUALIZACIÓN APARECE EN CUALQUIER PANTALLA */}
+      <UpdateModal />
+
       <Routes>
         <Route
           path="/"

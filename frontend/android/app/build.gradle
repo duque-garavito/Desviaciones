@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.fisholg.desviaciones"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,17 +14,28 @@ android {
         applicationId "com.fisholg.desviaciones"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // versionCode y versionName los administra scripts/release-apk.js:
+        // los sube automaticamente despues de cada build release exitoso.
+        versionCode 4
+        versionName "1.0.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
         }
     }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -51,4 +69,52 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+
+def enableAutoPublish = (findProperty('desviaciones.autoPublishRelease') ?: 'true').toBoolean()
+def enableAutoBump = (findProperty('desviaciones.autoBumpVersionCode') ?: 'true').toBoolean()
+def ejecutarRelease = { List<String> args ->
+    try {
+        def esWindows = System.getProperty('os.name').toLowerCase().contains('windows')
+        def comando = esWindows
+            ? (['cmd', '/c', 'node', 'scripts/release-apk.js'] + args)
+            : (['node', 'scripts/release-apk.js'] + args)
+
+        def pb = new ProcessBuilder(comando)
+        pb.directory(new File(projectRoot))
+        pb.redirectErrorStream(true)
+
+        def proc = pb.start()
+        proc.inputStream.eachLine { linea -> println linea }
+        def codigo = proc.waitFor()
+
+        if (codigo != 0) {
+            println "[release-apk] EL SCRIPT TERMINÓ CON CÓDIGO ${codigo} (SE OMITE EL BUILD , SE OMITE LA PUBLICACIÓN Y EL VERSIONADO)."
+        }
+    } catch (Exception e) {
+        println "[release-apk] NO SE PUDO EJECUTAR EL SCRIPT: ${e.message}"
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == 'assembleRelease') {
+        task.doLast {
+            def apk = new File(projectRoot, "android/app/build/outputs/apk/release/app-release.apk")
+            if (!apk.exists()) {
+                println "[release-apk] NO SE ENCONTRO EL APK RELEASE, SE OMITE PUBLICACION/VERSIONADO."
+                return
+            }
+
+            if (enableAutoPublish) {
+                println "[release-apk] PUBLICANDO APK RELEASE..."
+                ejecutarRelease(["--auto"])
+            }
+
+            if (enableAutoBump) {
+                println "[release-apk] PREPARANDO SIGUIENTE VERSION..."
+                ejecutarRelease(["--bump"])
+            }
+        }
+    }
 }

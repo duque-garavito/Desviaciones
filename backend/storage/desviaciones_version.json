@@ -1,0 +1,29 @@
+{
+  "version": "1.0.2",
+  "versionCode": 3,
+  "mandatory": false,
+  "downloadUrl": "/updates/desviaciones-v1.0.2.apk",
+  "changelog": [
+    {
+      "version": "1.0.2",
+      "date": "2026-08-04",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "date": "2026-08-04",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-08-04",
+      "changes": [
+        "Cambios de Prueba V.1.0.0"
+      ]
+    }
+  ]
+}
