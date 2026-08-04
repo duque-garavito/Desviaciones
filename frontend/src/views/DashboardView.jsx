@@ -5,6 +5,7 @@ import { Calendar, Sun, Moon } from "lucide-react";
 import "../assets/css/Dashboard.css";
 import { useAuth } from "../core/Context/AuthContext";
 import { ObtenerProgramacionPorUsuario } from "../core/services/Programacion.service";
+import { ObtenerTurnoDia } from "../core/services/Auth.service";
 
 export default function DashboardView() {
   const { usuarioActual, logout } = useAuth();
@@ -17,6 +18,16 @@ export default function DashboardView() {
 
   const [programacionInspector, setProgramacionInspector] = useState([]);
   const [cargando, setCargando] = useState(true);
+
+  const obtenerTurnodelDia=async()=>
+  {
+    const data = await ObtenerTurnoDia(currentUser.usuario);
+    if("error" in data){
+      console.log(data.message);
+      return {};
+    }
+    return data.turno;
+  }
 
   useEffect(() => {
     const fetchProgramacion = async () => {
@@ -32,6 +43,7 @@ export default function DashboardView() {
       setCargando(false);
     };
     fetchProgramacion();
+    obtenerTurnodelDia();
   }, []);
 
   return (

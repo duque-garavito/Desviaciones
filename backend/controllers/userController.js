@@ -7,8 +7,8 @@ const login = async (req, res) => {
 
   try {
     const user = await UserModel.findByCredentials(userCode, password);
-    console.log(user + "USUARIO DE LA BD");
-    console.log(password + "PASSWORD DE LA BD");
+    // console.log(user + "USUARIO DE LA BD");
+    // console.log(password + "PASSWORD DE LA BD");
     if (user) {
       // Verificar acceso por perfiles autorizados
       const perfilNorm = user.PERFIL ? user.PERFIL.trim().toUpperCase() : "";
@@ -25,18 +25,15 @@ const login = async (req, res) => {
         });
       }
 
-      let areaAsignada = "Sin asignar";
-      let turno = "Día";
+      
+      let turno={}
 
       if (perfilNorm === "SUP_CALI") {
-        const prog = await UserModel.getTodaySchedule(user.COD_USR);
-        if (prog) {
-          areaAsignada = prog.AREA_NOMBRE || "Área no definida";
-          turno = prog.TURNO === "NOCHE" ? "Noche" : "Día";
-          codArea = prog.COD_AS || "NAN";
-          codProgramacion = prog.COD_PROGRAMACION || "NAN";
-        }
+         turno = await obtenertTurno(user.COD_USR);
+        
       }
+
+
 
       res.json({
         success: true,
@@ -47,12 +44,7 @@ const login = async (req, res) => {
           email: user.USUARIO,
           perfil: perfilNorm,
         },
-        turno: {
-          areaAsignada,
-          turno,
-          codArea,
-          codProgramacion,
-        },
+        turno,
       });
     } else {
       res
@@ -63,11 +55,56 @@ const login = async (req, res) => {
     console.error("❌ Error en el login (Controller):", error);
     res.status(500).json({
       success: false,
-      message: "Error del servidor al conectar con la BD",
+      message: "Error del servidor al al iniciar sesion",
       details: error.message,
     });
   }
 };
+
+
+const ObtenerTurnoEndpoint=async(req,res)=>{
+    
+  try {
+    const { usuario } = req.body;
+    const turno = await obtenertTurno(usuario);
+    res.json({ success: true, turno });
+  } catch (error) {
+    console.error("Error al obtener turno (Controller):", error);
+    res.status(500).json({
+      error: true,
+      message: "Error del servidor al al obtener turno",
+      details: error.message,
+    });
+  }
+}
+
+const obtenertTurno =async (usuario)=>
+{
+  try {
+    let areaAsignada = "Sin asignar";
+      let turno = "Día";
+      let codArea = "NAN";
+      let codProgramacion = "NAN";
+
+    const prog = await UserModel.getTodaySchedule(usuario);
+       
+        if (prog) {
+          areaAsignada = prog.AREA_NOMBRE || "Área no definida";
+          turno = prog.TURNO === "NOCHE" ? "Noche" : "Día";
+          codArea = prog.COD_AS || "NAN";
+          codProgramacion = prog.COD_PROGRAMACION || "NAN";
+        }
+
+        return {
+          areaAsignada,
+          turno,
+          codArea,
+          codProgramacion
+        }
+  } catch (error) {
+    
+  }
+}
 
 const getInspectors = async (req, res) => {
   try {
@@ -81,4 +118,5 @@ const getInspectors = async (req, res) => {
 module.exports = {
   login,
   getInspectors,
+  ObtenerTurnoEndpoint
 };
