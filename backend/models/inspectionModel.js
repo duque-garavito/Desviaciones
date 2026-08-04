@@ -768,7 +768,7 @@ class InspectionModel {
                t2.DESC_SUB_CAT,
                t.cod_subcat,
                es.especie,
-               'CONGE' TIPO_ART
+               'CONG' TIPO_ART
           FROM ARTICULO_CONGE t
           JOIN ARTICULO_SUB_CATEG t2 ON t.cod_subcat = t2.COD_SUB_CAT
           join articulo_categ t3 on t2.cat_art=t3.cat_art
