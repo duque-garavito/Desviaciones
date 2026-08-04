@@ -13,6 +13,7 @@ import logo from '../assets/images/fishlogo.png';
 import { API_BASE_URL } from '../config';
 import '../assets/css/Layout.css';
 import { useAuth } from '../core/Context/AuthContext';
+import Footer from './Footer';
 
 // ── Lista del menú lateral (solo opciones de inspector) ──
 const menuItems = [
@@ -211,6 +212,9 @@ function Layout({  inspeccionEnProgreso = false, onConfirmarSalida }) {
       <main className="layout-main">
         <Outlet/>
       </main>
+
+      {/* ─── FOOTER ─── */}
+      <Footer className="app-footer" />
 
       {/* ─── MODAL DE CONFIRMACIÓN DE SALIDA DE INSPECCIÓN ─── */}
       {modalSalidaAbierto && (

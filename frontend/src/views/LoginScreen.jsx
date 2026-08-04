@@ -4,6 +4,7 @@ import "../assets/css/Login.css";
 import { API_BASE_URL } from "../config";
 import logo from "../assets/images/fishlogo.png";
 import { useAuth } from "../core/Context/AuthContext";
+import Footer from "../components/Footer";
 
 export default function LoginScreen() {
   const navigate = useNavigate();
@@ -87,6 +88,8 @@ export default function LoginScreen() {
             Iniciar Sesión
           </button>
         </form>
+
+        {/* <Footer className="login-footer" /> */}
       </div>
     </div>
   );
