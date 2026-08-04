@@ -75,10 +75,10 @@ export default function MdlConfirmarInicio() {
   return (
     <div className="ins-modal-overlay">
       <div className="ins-modal-card">
-        <h3>Iniciar Inspección</h3>
+        <h3>Iniciar Muestreo</h3>
 
         <p style={{ marginBottom: "12px" }}>
-          ¿Desea iniciar la inspección para el artículo{" "}
+          ¿Desea iniciar el muestreo para el artículo{" "}
           <strong>
             {articuloSeleccionado.cod_art}
             {articuloSeleccionado.desc_art

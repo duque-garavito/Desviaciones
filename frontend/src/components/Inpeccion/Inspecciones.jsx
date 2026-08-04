@@ -1488,7 +1488,7 @@ function Inspecciones({ usuario, onLogout }) {
             {confirmarArticulo && (
               <div className="ins-modal-overlay">
                 <div className="ins-modal-card">
-                  <h3>Iniciar Inspección</h3>
+                  <h3>Iniciar Muestreo</h3>
                   <p style={{ marginBottom: "12px" }}>
                     ¿Desea iniciar la inspección para el artículo:{" "}
                     <strong>
