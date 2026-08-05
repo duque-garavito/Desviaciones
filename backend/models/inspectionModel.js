@@ -763,7 +763,7 @@ class InspectionModel {
       // --ARTICULO CONGELADO | PROCESO (literal garavito.sql)
       query = `
         SELECT distinct t.cod_art_cong,
-               t.descr ,
+               t.descr desc_art ,
                '' as DESC_ETIQUETA,
                t2.DESC_SUB_CAT,
                t.cod_subcat,

@@ -95,7 +95,7 @@ LEFT JOIN ARTICULO art
    AND TRIM(ra.tipo_art) IN ('MP','PPTT')
 LEFT JOIN ARTICULO_CONGE artc
     ON TRIM(ra.cod_art) = TRIM(artc.COD_ART_CONG)
-   AND TRIM(ra.tipo_art) = 'CONGE'
+   AND TRIM(ra.tipo_art) = 'CONG'
 
 
       ${whereClause}
@@ -309,7 +309,7 @@ t.cant_muestra
         AND TRIM(ra.tipo_art) IN ('MP','PPTT')
   LEFT JOIN articulo_conge a2
         ON ra.cod_art = a2.cod_art_cong
-        AND TRIM(ra.tipo_art) = 'CONGE'
+        AND TRIM(ra.tipo_art) = 'CONG'
   JOIN reporte_respuestas_det rd
       ON ra.cod_rep_c = rd.cod_rep_c
       AND ra.item_rrda = rd.item_rrda
