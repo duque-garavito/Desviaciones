@@ -4,6 +4,7 @@ import "../assets/css/Login.css";
 import { API_BASE_URL } from "../config";
 import logo from "../assets/images/fishlogo.png";
 import { useAuth } from "../core/Context/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 import Footer from "../components/Footer";
 
 export default function LoginScreen() {
@@ -11,6 +12,7 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,15 +76,27 @@ export default function LoginScreen() {
 
           <div className="input-group">
             <label htmlFor="password">Contraseña</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                placeholder="********"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex="-1"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
+
 
           <button type="submit" className="login-btn">
             Iniciar Sesión

@@ -103,6 +103,39 @@
 .login-btn:active {
   transform: translateY(2px);
 }
+/* Contenedor del input de contraseña */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Espacio interno a la derecha para que el texto no tape el botón */
+.password-wrapper input {
+  padding-right: 44px;
+}
+
+/* Botón de alternar visibilidad */
+.toggle-password-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted, #718096);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.toggle-password-btn:hover {
+  color: var(--color-primary, #1756a6);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 
 /* ══════════════════════════════════
    MEDIA QUERIES PARA RESPONSIVIDAD

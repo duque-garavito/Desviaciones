@@ -1,0 +1,102 @@
+/* Fondo oscuro difuminado que bloquea TODA la pantalla e interacciones */
+.offline-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999; /* Por encima de cualquier navbar, sidebar o modal */
+  padding: 20px;
+  box-sizing: border-box;
+  animation: fadeInOverlay 0.3s ease;
+}
+
+/* Tarjeta flotante en el centro */
+.offline-card {
+  background-color: #ffffff;
+  padding: 32px 28px;
+  border-radius: 20px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: scaleInCard 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Ícono decorativo superior */
+.offline-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  background-color: #fef2f2;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 20px;
+}
+
+.offline-icon {
+  color: #dc2626;
+}
+
+.offline-card h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.offline-card p {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+/* Indicador de estado "Esperando red..." */
+.offline-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.offline-spinner {
+  animation: spin 2s linear infinite;
+  color: #dc2626;
+}
+
+/* Animaciones */
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleInCard {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+

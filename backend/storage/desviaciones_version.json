@@ -1,9 +1,65 @@
 {
-  "version": "1.0.2",
-  "versionCode": 3,
+  "version": "1.0.10",
+  "versionCode": 11,
   "mandatory": false,
-  "downloadUrl": "/updates/desviaciones-v1.0.2.apk",
+  "downloadUrl": "/updates/desviaciones-v1.0.10.apk",
   "changelog": [
+    {
+      "version": "1.0.10",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.9",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.8",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.7",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.6",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.5",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.4",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
+    {
+      "version": "1.0.3",
+      "date": "2026-08-07",
+      "changes": [
+        "Cambios generales"
+      ]
+    },
     {
       "version": "1.0.2",
       "date": "2026-08-04",

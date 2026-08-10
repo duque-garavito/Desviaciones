@@ -15,8 +15,9 @@ import {
   Inbox,
 } from "lucide-react";
 import ModalDetalle from "../components/Registros/ModalDetalle";
+import { useAuth } from "../core/Context/AuthContext";
 
-export default function RegistrosView({ usuario, onLogout }) {
+export default function RegistrosView() {
   const navigate = useNavigate();
   // Estados principales
   const [registros, setRegistros] = useState([]);
@@ -24,14 +25,15 @@ export default function RegistrosView({ usuario, onLogout }) {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const {  usuarioActual } = useAuth();
 
   // Estados para filtros
   const [areas, setAreas] = useState([]);
   const [inspectores, setInspectores] = useState([]);
-  const esAdmin = usuario?.perfil === "JF_CALID";
+  const esAdmin = usuarioActual.perfil=== "JF_CALID";
   const [filtros, setFiltros] = useState({
     area: "",
-    inspector: esAdmin ? "" : usuario?.id || "",
+    inspector: esAdmin ? "" : usuarioActual.usuario || "",
     fechaInicio: "",
     fechaFin: "",
   });

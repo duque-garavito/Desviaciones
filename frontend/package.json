@@ -1,7 +1,7 @@
 {
   "name": "desviaciones-frontend",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.11",
   "type": "module",
   "scripts": {
     "dev": "vite --host --port 5007",
@@ -16,6 +16,7 @@
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.2",
+    "@capacitor/network": "^8.0.1",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
