@@ -25,12 +25,10 @@ const login = async (req, res) => {
         });
       }
 
-      
-      let turno={}
+      let turno = {}
 
       if (perfilNorm === "SUP_CALI") {
-         turno = await obtenertTurno(user.COD_USR);
-        
+        turno = await obtenertTurno(user.COD_USR);
       }
 
 
@@ -62,8 +60,8 @@ const login = async (req, res) => {
 };
 
 
-const ObtenerTurnoEndpoint=async(req,res)=>{
-    
+const ObtenerTurnoEndpoint = async (req, res) => {
+
   try {
     const { usuario } = req.body;
     const turno = await obtenertTurno(usuario);
@@ -78,31 +76,52 @@ const ObtenerTurnoEndpoint=async(req,res)=>{
   }
 }
 
-const obtenertTurno =async (usuario)=>
-{
+const obtenertTurno = async (usuario) => {
   try {
     let areaAsignada = "Sin asignar";
-      let turno = "Día";
-      let codArea = "NAN";
-      let codProgramacion = "NAN";
+    let turno = "Día";
+    let codArea = "NAN";
+    let codProgramacion = "NAN";
+    let areas = [];
 
     const prog = await UserModel.getTodaySchedule(usuario);
-       
-        if (prog) {
-          areaAsignada = prog.AREA_NOMBRE || "Área no definida";
-          turno = prog.TURNO === "NOCHE" ? "Noche" : "Día";
-          codArea = prog.COD_AS || "NAN";
-          codProgramacion = prog.COD_PROGRAMACION || "NAN";
-        }
+    const item = Array.isArray(prog) ? prog[0] : prog;
+    console.log(prog);
+    if (item) {
+      if (Array.isArray(prog) && prog.length > 1) {
+        areaAsignada = prog.map((p) => p.AREA_NOMBRE).filter(Boolean).join(" / ");
+      } else {
+        areaAsignada = item.AREA_NOMBRE || item.area_nombre || "Área no definida";
+      }
+      turno = item.TURNO === "NOCHE" ? "Noche" : "Día";
+      codArea = item.COD_AS || item.cod_as || "NAN";
+      codProgramacion = item.COD_PROGRAMACION || item.cod_programacion || "NAN";
+      // 🔹 AQUÍ SE MUESTRAN Y CONSTRUYEN TODAS LAS ÁREAS PROGRAMADAS DEL DÍA
+      areas = Array.isArray(prog)
+        ? prog.map((p) => ({
+          cod_as: p.COD_AS || p.cod_as,
+          nombre: p.AREA_NOMBRE || p.area_nombre || "Área sin nombre",
+          cod_programacion: p.COD_PROGRAMACION || p.cod_programacion,
+        }))
+        : [];
+    }
 
-        return {
-          areaAsignada,
-          turno,
-          codArea,
-          codProgramacion
-        }
+    return {
+      areaAsignada,
+      turno,
+      codArea,
+      codProgramacion,
+      areas,
+    };
   } catch (error) {
-    
+    console.error("error al obtener turno (ObtenerTurno)", error);
+    return {
+      areaAsignada: "Sin asignar",
+      turno: "Día",
+      codArea: "NAN",
+      codProgramacion: "NAN",
+      areas: [],
+    }
   }
 }
 

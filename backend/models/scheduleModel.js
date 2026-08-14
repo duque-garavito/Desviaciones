@@ -39,14 +39,28 @@ class ScheduleModel {
     // Remove duplicates by date, keeping only the latest assignment per day
     const uniqueMap = new Map();
     for (const d of rows) {
+      console.log(d + "PROBANDO SQL");
       const fecha = ScheduleModel.formatDateOnly(d.FEC_PROGRAM);
-      uniqueMap.set(fecha, {
-        FECHA: fecha,
-        TURNO: (d.TURNO || '').trim() === 'TD' ? 'Día' : 'Noche',
-        area: d.AREA_DESCR || 'Sin área',
-        area_nombre: d.AREA_DESCR || 'Sin área'
-      });
+      const areaNombre = d.AREA_DESCR || 'Sin área';
+      const turnoNombre = (d.TURNO || '').trim() === 'TD' ? 'Día' : 'Noche';
+
+      if (uniqueMap.has(fecha)) {
+        const exist = uniqueMap.get(fecha);
+        // Agregamos el área si aún no está en la lista de ese día
+        if (!exist.area.includes(areaNombre)) {
+          exist.area += ` / ${areaNombre}`;
+          exist.area_nombre += ` / ${areaNombre}`;
+        }
+      } else {
+        uniqueMap.set(fecha, {
+          FECHA: fecha,
+          TURNO: turnoNombre,
+          area: areaNombre,
+          area_nombre: areaNombre
+        });
+      }
     }
+
 
     return Array.from(uniqueMap.values());
   }

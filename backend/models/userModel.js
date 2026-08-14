@@ -56,6 +56,7 @@ class UserModel {
 
   // Obtener programación de un inspector para hoy
   static async getTodaySchedule(userId) {
+    console.log(userId + "USUARIO DEL SISTEMA");
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
