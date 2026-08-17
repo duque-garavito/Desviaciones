@@ -695,6 +695,13 @@ class InspectionModel {
   static async buscarArticulos(busqueda, subCat, codAs, parte) {
     const areaNorm = (codAs || "").trim().toUpperCase();
     const txtBusqueda = (busqueda || "").trim();
+
+    console.log("=================================");
+    console.log("🔴 ÁREA RECIBIDA:", codAs);
+    console.log("🔴 ÁREA NORMALIZADA:", areaNorm);
+    console.log("🔴 BUSQUEDA:", txtBusqueda);
+    console.log("🔴 PARTE:", parte);
+    console.log("=================================");
     const replacements = {
       busqueda: txtBusqueda,
       codAs: (codAs || "").trim(),

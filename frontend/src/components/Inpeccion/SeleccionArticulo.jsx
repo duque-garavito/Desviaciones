@@ -30,7 +30,11 @@ export default function SeleccionArticulo() {
       if (planSeleccionado)
         params.set("cod_plan", String(planSeleccionado ?? "").trim());
 
-      console.log("🔎 Buscando artículos:", Object.fromEntries(params));
+      console.log("=================================");
+      console.log("📌 ÁREA ACTIVA:", areaActiva);
+      console.log("📌 COD AS ENVIADO:", areaActiva?.cod_as);
+      console.log("📌 URL:", `/api/inspecciones/articulos?${params.toString()}`);
+      console.log("=================================");
 
       const peticion = await obtenerArticulos(params);
 

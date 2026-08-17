@@ -13,7 +13,7 @@ export default function MdlConfirmarInicio() {
     seleccionarReporte,
   } = useDesviacion();
 
-  const { usuarioActual, turnoActual } = useAuth();
+  const { usuarioActual, areaActiva } = useAuth();
 
   const [listaPlanes, setListaPlanes] = useState([]);
   const [loadingPlanes, setLoadingPlanes] = useState(false);
@@ -50,12 +50,19 @@ export default function MdlConfirmarInicio() {
   }, [listaPlanes, planSeleccionado, seleccionarPlan]);
 
   const generarCabecera = async () => {
+    const codArea =
+      areaActiva?.cod_as || areaActiva?.codArea || areaActiva?.COD_AS;
+    const codProgramacion =
+      areaActiva?.cod_programacion ||
+      areaActiva?.codProgramacion ||
+      areaActiva?.COD_PROGRAMACION;
+
     const peticion = await crearCabecera(
-      usuarioActual.usuario,
+      usuarioActual?.usuario || usuarioActual?.cod_usr,
       planSeleccionado,
-      turnoActual.codArea,
-      articuloSeleccionado.cod_art,
-      turnoActual.codProgramacion,
+      codArea,
+      articuloSeleccionado?.cod_art,
+      codProgramacion,
     );
 
     if (peticion.error) {

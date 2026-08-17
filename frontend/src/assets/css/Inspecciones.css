@@ -37,6 +37,106 @@
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
+/* ─── Grid y Tarjetas de Selección de Área ─── */
+.ins-area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 4px;
+}
+
+.ins-area-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.ins-area-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-primary, #2563eb);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.ins-area-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(37, 99, 235, 0.14);
+  background: #f8fafc;
+}
+
+.ins-area-card:hover::before {
+  opacity: 1;
+}
+
+.ins-area-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: var(--color-primary, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.ins-area-card:hover .ins-area-card-icon {
+  background: var(--color-primary, #2563eb);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.ins-area-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ins-area-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-main, #0f172a);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.ins-area-card-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ins-area-card-arrow {
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ins-area-card:hover .ins-area-card-arrow {
+  color: var(--color-primary, #2563eb);
+  transform: translateX(4px);
+}
+
 /* Header elegante */
 .ins-articulo-header {
   display: flex;

@@ -23,7 +23,7 @@ export default function Formulario() {
     finalizarInspeccion,
     datosGenerales,
   } = useDesviacion();
-  const { usuarioActual, turnoActual, limpiarArea } = useAuth();
+  const { usuarioActual, areaActiva, turnoActual, limpiarArea } = useAuth();
   // Separar preguntas tipo V (texto) de las numéricas/binarias
   // const preguntasMuestreo = preguntas.filter(p => p.tipo_campo !== 'V');
 
@@ -144,8 +144,8 @@ export default function Formulario() {
 
       try {
         const params = new URLSearchParams();
-
-        params.set("cod_as", turnoActual.codArea);
+        const codArea = areaActiva?.cod_as || areaActiva?.codArea || areaActiva?.COD_AS || turnoActual?.codArea || "";
+        params.set("cod_as", String(codArea).trim());
 
         // params.set("cod_art", String(articuloSeleccionado.cod_art).trim());
         const subCatVal = articuloSeleccionado?.sub_cat_art;
@@ -201,7 +201,7 @@ export default function Formulario() {
           alt="Desviaciones"
           style={{ height: "42px", width: "auto", objectFit: "contain" }}
         /> */}
-        
+
         <button
           className="ins-btn-finalizar"
           onClick={handleFinalizarReporte}
@@ -312,10 +312,10 @@ export default function Formulario() {
                 const causasFiltradas =
                   categoriaCausaActiva && categoriaCausaActiva !== "TODAS"
                     ? causasDisponibles.filter(
-                        (c) =>
-                          (c.categoria ? c.categoria.trim() : "General") ===
-                          categoriaCausaActiva,
-                      )
+                      (c) =>
+                        (c.categoria ? c.categoria.trim() : "General") ===
+                        categoriaCausaActiva,
+                    )
                     : causasDisponibles;
 
                 return (
