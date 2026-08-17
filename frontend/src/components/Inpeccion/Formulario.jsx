@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import logoApk from "../../assets/images/logo apk desviaciones.png";
 import { Loader2, CheckCircle2, AlertCircle, Check, Save } from "lucide-react";
 import { useDesviacion } from "../../core/Context/DesviacionContext";
@@ -12,16 +13,17 @@ import {
 import FormTexto from "./FormTexto";
 
 export default function Formulario() {
+  const navigate = useNavigate();
   const {
     articuloSeleccionado,
     reporteGenerado,
     limpiarArticulo,
     muestrasActuales,
     asignarMuestras,
-    limpiarDatosInspeccion,
+    finalizarInspeccion,
     datosGenerales,
   } = useDesviacion();
-  const { usuarioActual, turnoActual } = useAuth();
+  const { usuarioActual, turnoActual, limpiarArea } = useAuth();
   // Separar preguntas tipo V (texto) de las numéricas/binarias
   // const preguntasMuestreo = preguntas.filter(p => p.tipo_campo !== 'V');
 
@@ -122,6 +124,12 @@ export default function Formulario() {
       return;
     }
     setConfirmarFinalizar(true);
+  };
+
+  const confirmarFinalizacionReporte = () => {
+    finalizarInspeccion();
+    limpiarArea();
+    navigate("/dashboard", { replace: true });
   };
 
   const handleVerGeneral = () => {
@@ -420,7 +428,7 @@ export default function Formulario() {
               </button>
               <button
                 className="ins-modal-yes"
-                onClick={limpiarDatosInspeccion}
+                onClick={confirmarFinalizacionReporte}
               >
                 Confirmar
               </button>

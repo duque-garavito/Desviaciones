@@ -8,6 +8,7 @@ import {
 import Login from "./views/LoginScreen";
 import Dashboard from "./views/DashboardView";
 import InspeccionScreen from "./views/InspeccionScreen";
+import SeleccionArea from "./components/Inpeccion/SeleccionArea";
 import Layout from "./components/Layout"; // <-- Nuevo
 import OfflineBanner from "./components/OfflneBanner";
 import UpdateModal from "./components/UpdateModal";
@@ -56,6 +57,7 @@ function App() {
 
         <Route element={<RutaProtegida />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/seleccionar-area" element={<SeleccionArea />} />
           <Route
             path="/inspecciones"
             element={

@@ -6,11 +6,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [turnoActual, setTurnoActual] = useState(null);
+  const [areaActiva, setAreaActiva] = useState(null);
 
   useEffect(() => {
     try {
       const guardado = localStorage.getItem("usuario");
       const guardado2 = localStorage.getItem("turno");
+      const areaGuardada = localStorage.getItem("areaActiva");
 
       if (
         guardado &&
@@ -29,6 +31,10 @@ export function AuthProvider({ children }) {
         setUsuarioActual(usuario);
         setTurnoActual(turno);
       }
+
+      if (areaGuardada && areaGuardada !== "undefined") {
+        setAreaActiva(JSON.parse(areaGuardada));
+      }
     } catch (e) {
       console.error("Error al leer sesión:", e);
       localStorage.removeItem("usuario");
@@ -37,6 +43,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const seleccionarArea = (area) => {
+    setAreaActiva(area);
+    localStorage.setItem("areaActiva", JSON.stringify(area));
+  };
+
+  const limpiarArea = () => {
+    setAreaActiva(null);
+    localStorage.removeItem("areaActiva");
+  };
+
   const login = (usuariodata, turnodata) => {
     setUsuarioActual(usuariodata);
     setTurnoActual(turnodata);
@@ -44,9 +60,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem("turno", JSON.stringify(turnodata));
   };
 
+  const actualizarTurno = (turno) => {
+    setTurnoActual(turno);
+    localStorage.setItem("turno", JSON.stringify(turno));
+  };
+
   const logout = () => {
     setUsuarioActual(null);
     setTurnoActual(null);
+    limpiarArea();
     localStorage.removeItem("usuario");
     localStorage.removeItem("turno");
   };
@@ -56,6 +78,10 @@ export function AuthProvider({ children }) {
       value={{
         usuarioActual,
         turnoActual,
+        areaActiva,
+        seleccionarArea,
+        limpiarArea,
+        actualizarTurno,
         loading,
         login,
         logout,

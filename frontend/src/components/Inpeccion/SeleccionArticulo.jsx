@@ -11,7 +11,7 @@ export default function SeleccionArticulo() {
   const [busqueda, setBusqueda] = useState("");
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const { usuarioActual, turnoActual } = useAuth();
+  const { usuarioActual, turnoActual, areaActiva } = useAuth();
   const {
     seleccionarArticulo,
     articuloSeleccionado,
@@ -25,10 +25,12 @@ export default function SeleccionArticulo() {
       const params = new URLSearchParams();
       if (termino && termino.trim().length >= 2)
         params.set("buscar", termino.trim());
-      if (usuarioActual)
-        params.set("cod_as", String(turnoActual.codArea).trim());
+      if (usuarioActual && areaActiva?.cod_as)
+        params.set("cod_as", String(areaActiva.cod_as).trim());
       if (planSeleccionado)
         params.set("cod_plan", String(planSeleccionado ?? "").trim());
+
+      console.log("🔎 Buscando artículos:", Object.fromEntries(params));
 
       const peticion = await obtenerArticulos(params);
 
@@ -38,7 +40,6 @@ export default function SeleccionArticulo() {
         return;
       }
       setLista(peticion.articulos);
-      // console.log(data.success ? (data.articulos || []) : [])
     } catch (error) {
       setLista([]);
       console.log(error);
@@ -47,17 +48,20 @@ export default function SeleccionArticulo() {
     }
   };
 
-  // Debounce solo cuando hay 2 o más caracteres. Al borrar todo (< 2), NO busca nada.
   useEffect(() => {
+    if (!areaActiva?.cod_as) {
+      setLista([]);
+      return;
+    }
+
     const txt = busqueda.trim();
-    // if (txt.length < 2) return;
 
     const timer = setTimeout(() => {
       buscarArticulos(txt);
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [busqueda]);
+  }, [busqueda, areaActiva]);
 
   const handleBusquedaChange = (valor) => {
     setBusqueda(valor);
@@ -69,14 +73,14 @@ export default function SeleccionArticulo() {
       {/* Encabezado elegante */}
       <div className="ins-articulo-header">
         <div className="ins-header-info">
-          {/* <img
-            src={logoApk}
-            alt="Logo Desviaciones"
-            style={{ height: "48px", width: "auto", objectFit: "contain" }}
-          /> */}
           <div className="ins-header-icon-badge"> <Package size={22} /> </div>
           <div>
             <h2 className="ins-header-title">Selección de Artículo</h2>
+            {areaActiva && (
+              <div style={{ fontSize: "14px", color: "#64748b", marginTop: "2px" }}>
+                Área actual: <strong>{areaActiva.nombre}</strong>
+              </div>
+            )}
           </div>
         </div>
       </div>

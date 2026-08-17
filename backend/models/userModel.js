@@ -73,7 +73,7 @@ class UserModel {
       { userId: String(userId || "").trim(), todayStr },
     );
 
-    return results[0];
+    return results;
   }
 
   // Obtener lista de inspectores

@@ -63,6 +63,10 @@ export function DesviacionProvider({ children }) {
     limpiarDatosGenerales();
   };
 
+  const finalizarInspeccion = () => {
+    limpiarDatosInspeccion();
+  };
+
   const limpiarArticulo = () => {
     localStorage.removeItem("articuloSeleccionado");
     setArticuloSeleccionado(null);
@@ -128,6 +132,7 @@ export function DesviacionProvider({ children }) {
     reporteGenerado,
     seleccionarReporte,
     limpiarDatosInspeccion,
+    finalizarInspeccion,
     limpiarArticulo,
     limpiarPlan,
     limpiarReporte,

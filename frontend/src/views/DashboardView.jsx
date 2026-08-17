@@ -8,7 +8,7 @@ import { ObtenerProgramacionPorUsuario } from "../core/services/Programacion.ser
 import { ObtenerTurnoDia } from "../core/services/Auth.service";
 
 export default function DashboardView() {
-  const { usuarioActual, logout } = useAuth();
+  const { usuarioActual, actualizarTurno, logout } = useAuth();
   const navigate = useNavigate();
 
   const currentUser = usuarioActual || {
@@ -19,15 +19,22 @@ export default function DashboardView() {
   const [programacionInspector, setProgramacionInspector] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  const obtenerTurnodelDia=async()=>
-  {
+  const obtenerTurnodelDia = async () => {
     const data = await ObtenerTurnoDia(currentUser.usuario);
-    if("error" in data){
-      console.log(data.message);
+
+    console.log("🔥 RESPUESTA COMPLETA DEL TURNO:", data);
+    console.log("🔥 TURNO:", data?.turno);
+    console.log("🔥 ÁREAS:", data?.turno?.areas);
+
+    if (!data || data.error) {
+      console.log(data?.message);
       return {};
     }
+
+    actualizarTurno(data.turno);
+
     return data.turno;
-  }
+  };
 
   useEffect(() => {
     const fetchProgramacion = async () => {
@@ -83,7 +90,7 @@ export default function DashboardView() {
                           key={idx}
                           className={isToday ? "clickable" : "disabled-row"}
                           onClick={() => {
-                            if (isToday) navigate("/inspecciones");
+                            if (isToday) navigate("/seleccionar-area");
                           }}
                           style={{
                             cursor: isToday ? "pointer" : "not-allowed",
