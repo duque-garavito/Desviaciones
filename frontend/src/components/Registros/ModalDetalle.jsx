@@ -92,10 +92,24 @@ function ModalDetalle({ id, isOpen, onClose }) {
             <>
               {(() => {
                 const baseReg = registrosGroup.cabecera;
+                const parseDateStr = (str) => {
+                  if (!str) return null;
+                  if (str instanceof Date) return str;
+                  const parts = String(str).trim().split(" ");
+                  if (parts.length >= 2) {
+                    const [d, m, y] = parts[0].split("/").map(Number);
+                    const [h, min, s] = parts[1].split(":").map(Number);
+                    if (y && m && d) return new Date(y, m - 1, d, h || 0, min || 0, s || 0);
+                  }
+                  const d = new Date(str);
+                  return isNaN(d.getTime()) ? null : d;
+                };
+
                 const getDuracionGroup = () => {
                   if (!baseReg?.hora_inicio || !baseReg?.hora_fin) return null;
-                  const inicio = new Date(baseReg.hora_inicio);
-                  const fin = new Date(baseReg.hora_fin);
+                  const inicio = parseDateStr(baseReg.hora_inicio);
+                  const fin = parseDateStr(baseReg.hora_fin);
+                  if (!inicio || !fin) return null;
                   const diffMs = fin - inicio;
                   if (diffMs < 0) return null;
                   const diffMins = Math.floor(diffMs / 60000);
@@ -453,47 +467,65 @@ function ModalDetalle({ id, isOpen, onClose }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {preguntasUnicas.map((pregunta) => (
-                      <tr
-                        key={pregunta.cod_pregunta}
-                        style={
-                          pregunta.tipo_campo === "N"
-                            ? {}
-                            : {
-                                textAlign: "left",
-                                padding: "9px 14px",
-                                fontWeight: "700",
-                                fontSize: "13px",
-                                color: "#000000",
-                                backgroundColor: "#f1f5f9",
-                              }
-                        }
-                      >
-                        <td>{pregunta.pregunta}</td>
-
-                        {registrosGroup.articulos.map((art) => (
-                          <td
-                            key={`${pregunta.cod_pregunta}-${art.cod_art}`}
-                            style={
-                              pregunta.tipo_campo === "N"
-                                ? { textAlign: "center" }
-                                : {
-                                    textAlign: "center",
-                                    padding: "9px 14px",
-                                    fontWeight: "700",
-                                    fontSize: "13px",
-                                    color: "#000000",
-                                    backgroundColor: "#f1f5f9",
-                                  }
-                            }
-                          >
-                            {respuestasMap[
-                              `${pregunta.cod_pregunta}_${art.cod_art.trim()}`
-                            ] ?? 0}
-                          </td>
-                        ))}
+                    {preguntasUnicas.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={(registrosGroup.articulos?.length || 1) + 1}
+                          style={{
+                            textAlign: "center",
+                            padding: "20px",
+                            color: "#64748b",
+                            fontStyle: "italic",
+                            fontSize: "13px",
+                            backgroundColor: "#f8fafc",
+                          }}
+                        >
+                          Sin desvíos / preguntas adicionales registradas para este artículo.
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      preguntasUnicas.map((pregunta) => (
+                        <tr
+                          key={pregunta.cod_pregunta}
+                          style={
+                            pregunta.tipo_campo === "N"
+                              ? {}
+                              : {
+                                  textAlign: "left",
+                                  padding: "9px 14px",
+                                  fontWeight: "700",
+                                  fontSize: "13px",
+                                  color: "#000000",
+                                  backgroundColor: "#f1f5f9",
+                                }
+                          }
+                        >
+                          <td>{pregunta.pregunta}</td>
+
+                          {registrosGroup.articulos.map((art) => (
+                            <td
+                              key={`${pregunta.cod_pregunta}-${art.cod_art}`}
+                              style={
+                                pregunta.tipo_campo === "N"
+                                  ? { textAlign: "center" }
+                                  : {
+                                      textAlign: "center",
+                                      padding: "9px 14px",
+                                      fontWeight: "700",
+                                      fontSize: "13px",
+                                      color: "#000000",
+                                      backgroundColor: "#f1f5f9",
+                                    }
+                              }
+                            >
+                              {respuestasMap[
+                                `${pregunta.cod_pregunta}_${art.cod_art.trim()}`
+                              ] ?? 0}
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
